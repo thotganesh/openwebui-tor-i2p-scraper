@@ -11,6 +11,24 @@ A robust, dual-path web scraping infrastructure built for local AI models (speci
 3. **Smart Extraction:** Uses Mozilla Readability and `html2text` to strip away menus, ads, and sidebars, delivering only the core article in pure Markdown. Includes a fallback mechanism for homepages and search engines.
 4. **Token & RAM Optimized:** Conditionally blocks heavy media (images, videos, fonts) at the network level via Playwright routing.
 
+## 🧩 Open WebUI Tools
+
+This project ships as **two Open WebUI tools that work together**. Ready-to-import files
+are in [`openwebui-tools/`](openwebui-tools/):
+
+| Tool | File | Purpose |
+|---|---|---|
+| **Web Browser (Clear)** | [`web_browser_clear.py`](openwebui-tools/web_browser_clear.py) | Normal sites via headless Chromium + stealth |
+| **Web Browser (Tor/Anonymous)** | [`web_browser_tor.py`](openwebui-tools/web_browser_tor.py) | Anonymous browsing + .onion via Tor/Snowflake |
+
+> ⚠️ **Both tools are required.** They are the two halves of the same stack: the Clear tool
+> talks to `browser-clear`, the Tor tool to `browser-tor`. Install both.
+
+### How to install
+1. In OpenWebUI go to **Admin → Workspace → Tools → new tool**
+2. Paste the content of each file (one tool per file)
+3. Enable both tools in your chat and make sure your model supports function calling
+
 ## 🏗️ Architecture
 
 ```text
