@@ -23,9 +23,13 @@ A robust, dual-path web scraping infrastructure built for local AI models (speci
     ┌─────────▼──────┐  ┌──────▼───────┐  ┌─────▼─────────┐
     │ browser-clear  │  │ browser-tor  │  │   tor-proxy   │
     │ Chromium       │  │ Firefox      │──▶ Snowflake     │
-    │ port 8080/8082 │  │ port 8081    │  │ SOCKS :9150   │
+    │ port 8080/8082 │  │ port 8081    │  │ SOCKS  :9150  │
+    │                │  │              │  │ CTRL   :9151  │
     └────────────────┘  └──────────────┘  └───────────────┘
+```
 
+> All traffic runs on the internal Docker network `ai-net`: no Tor port is exposed
+> to the outside.
 
 ## 📖 Complete Tutorial
 
@@ -106,7 +110,7 @@ Copy the hash (`16:...`) into the torrc. The same password in plain text goes in
 
 #### 1.3 torrc — [`tor-snowflake/torrc`](tor-snowflake/torrc)
 
-```bash
+```ini
 SocksPort 0.0.0.0:9150
 UseBridges 1
 ClientTransportPlugin snowflake exec /usr/local/bin/snowflake-client \
@@ -143,7 +147,7 @@ What it does ([`browser-tor/app.py`](browser-tor/app.py)):
 - **Hardened Firefox**: `privacy.resistFingerprinting` + letterboxing reduce the browser's uniqueness; viewport 1000x900, UTC timezone and en-US language are values common among Tor users
 - **WebRTC disabled**: with WebRTC enabled the real IP leaks via ICE/STUN, bypassing the SOCKS proxy
 - **New circuit per request**: NEWNYM via ControlPort (Playwright doesn't support authentication on SOCKS5, so random username/password aren't used; `stem` requires a literal IP, hence `socket.gethostbyname`)
-- **Text extraction**: Readability + html2text fallback (see section 6)
+- **Text extraction**: Readability + html2text fallback (see section 8)
 
 ---
 
@@ -343,6 +347,9 @@ To browse normal websites ALWAYS use the browse_web tool.
 For .onion sites, or when the user explicitly requests anonymity, ALWAYS use the browse_tor tool.
 You have no other way to access the internet.
 ```
+
+If the model doesn't call the tools, check that they are enabled in the chat and that the
+model supports function calling (model settings → Capabilities).
 
 ---
 
