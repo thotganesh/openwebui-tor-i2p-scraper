@@ -1,0 +1,29 @@
+services:
+  tor-proxy:
+    build: ./tor-snowflake
+    container_name: tor-proxy
+    networks: [ai-net]
+    volumes:
+      - ./tor-snowflake/torrc:/etc/tor/torrc:ro
+    restart: unless-stopped
+
+  browser-tor:
+    build: ./browser-tor
+    container_name: browser-tor
+    networks: [ai-net]
+    depends_on: [tor-proxy]
+    ports:
+      - "127.0.0.1:8081:8081"
+    restart: unless-stopped
+
+  browser-clear:
+    build: ./browser-clear
+    container_name: browser-clear
+    networks: [ai-net]
+    ports:
+      - "127.0.0.1:8082:8080"
+    restart: unless-stopped
+
+networks:
+  ai-net:
+    external: true
