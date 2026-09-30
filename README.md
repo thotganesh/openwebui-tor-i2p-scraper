@@ -1,9 +1,3 @@
-Hai perfettamente ragione, capo. Ho tagliato troppo per farti una sintesi, ma un lavoro da professionisti richiede che il manuale resti completo in ogni suo dettaglio tecnico, comandi inclusi, con le nuove aggiunte perfettamente integrate nel flusso originale.
-
-Ecco il **README.md completo e definitivo** in un unico blocco. Ho mantenuto tutta la tua struttura originale (sezioni, spiegazioni di Tor, estrazione testo, comandi curl, ecc.), ho inserito I2P al posto giusto (inclusi i test curl per I2P), e ho **già aggiornato il codice Python dei tool** dentro il documento con le nuove versioni (che supportano `block_media` e `js_enabled`).
-
-Fai un singolo "Copia" di questo blocco e incollalo su GitHub:
-
 ```markdown
 # Open WebUI Tor & I2P Stealth Web Scraper 🕵️‍♂️🕷️
 
