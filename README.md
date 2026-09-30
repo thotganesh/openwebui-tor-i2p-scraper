@@ -26,6 +26,7 @@ Built specifically as tools for **Open WebUI**.
 - [🌟 Core Features](#-core-features)
 - [🧩 Open WebUI Tools](#-open-webui-tools)
 - [🏗️ Architecture](#️-architecture)
+- [🚀 Quick Start](#-quick-start)
 - [📖 Complete Tutorial](#-complete-tutorial)
   - [Prerequisites](#prerequisites)
   - [Folder structure](#folder-structure)
@@ -123,6 +124,48 @@ This project ships as **three Open WebUI tools that work together**. Ready-to-im
 
 > [!NOTE]
 > All traffic runs on the internal Docker network `ai-net`: no Tor or I2P proxy port is exposed to the outside.
+
+---
+
+## 🚀 Quick Start
+
+Already know your way around Docker? Get the whole stack running in a few commands. Want to understand every piece? Skip to the [Complete Tutorial](#-complete-tutorial).
+
+**Requirements:** a VPS with Docker + Docker Compose, outgoing UDP open, OpenWebUI already running.
+
+```bash
+# 1) Clone the repository
+git clone https://github.com/thotganesh/openwebui-tor-i2p-scraper.git
+cd openwebui-tor-i2p-scraper
+
+# 2) Create the shared Docker network (skip if it already exists)
+docker network create ai-net
+
+# 3) Connect OpenWebUI to the network (skip if it's already connected)
+docker network connect ai-net open-webui
+
+# 4) I2P data folder: i2pd runs as non-root and needs write access
+mkdir -p i2p-data && chmod -R 777 i2p-data
+
+# 5) Tor ControlPort password: generate the hash...
+docker run --rm debian:bookworm-slim bash -c \
+  "apt-get update -qq && apt-get install -y -qq tor >/dev/null && tor --hash-password 'YourSecurePassword'"
+#    ...paste it in tor-snowflake/torrc (HashedControlPassword 16:...)
+#    ...and set the same plain-text password as CONTROL_PASSWORD in browser-tor/app.py
+
+# 6) Build and start everything
+docker compose up -d --build
+
+# 7) Wait for Tor: look for "Bootstrapped 100% (done)"
+docker compose logs -f tor-proxy
+```
+
+> [!IMPORTANT]
+> - **Change the default password.** Never leave the placeholder values in `torrc` and `browser-tor/app.py`.
+> - **I2P warm-up:** `i2pd` needs about 3-5 minutes on its first boot before `.i2p` sites resolve.
+> - The first build takes a few minutes (Snowflake compilation + Playwright image, about 2 GB).
+
+**Then:** install the three tools from [`openwebui-tools/`](openwebui-tools/) in OpenWebUI (see [How to install](#-how-to-install)) and run the [test battery](#7-verification-test-battery) to verify everything.
 
 ---
 
