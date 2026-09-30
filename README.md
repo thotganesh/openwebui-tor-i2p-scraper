@@ -147,11 +147,13 @@ docker network connect ai-net open-webui
 # 4) I2P data folder: i2pd runs as non-root and needs write access
 mkdir -p i2p-data && chmod -R 777 i2p-data
 
-# 5) Tor ControlPort password: generate the hash...
+# 5) Configure secrets: copy .env.example to .env and fill in your values
+cp .env.example .env
+# Generate the control password hash if you want a custom one:
 docker run --rm debian:bookworm-slim bash -c \
   "apt-get update -qq && apt-get install -y -qq tor >/dev/null && tor --hash-password 'YourSecurePassword'"
-#    ...paste it in tor-snowflake/torrc (HashedControlPassword 16:...)
-#    ...and set the same plain-text password as CONTROL_PASSWORD in browser-tor/app.py
+# Then edit .env and paste your plain-text password (TOR_CONTROL_PASSWORD) 
+# and the generated hash (TOR_CONTROL_HASH).
 
 # 6) Build and start everything
 docker compose up -d --build
