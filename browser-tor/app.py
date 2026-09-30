@@ -1,3 +1,4 @@
+import os
 import asyncio
 import socket
 from fastapi import FastAPI
@@ -15,9 +16,10 @@ class BrowseRequest(BaseModel):
     wait_selector: str | None = None
     extract_text: bool = True
     block_media: bool = True
+    js_enabled: bool = True
 
 TOR_PROXY = {"server": "socks5://tor-proxy:9150"}
-CONTROL_PASSWORD = "CambiaQuestaPassword123"
+CONTROL_PASSWORD = os.environ.get("TOR_CONTROL_PASSWORD")
 
 FIREFOX_PREFS = {
     "media.peerconnection.enabled": False,
@@ -115,6 +117,7 @@ async def browse(req: BrowseRequest):
             viewport={"width": 1000, "height": 900},
             timezone_id="UTC",
             locale="en-US",
+            java_script_enabled=req.js_enabled,
         )
         page = await context.new_page()
 
@@ -124,7 +127,13 @@ async def browse(req: BrowseRequest):
         await page.goto(req.url, wait_until="domcontentloaded", timeout=90000)
         
         await page.wait_for_timeout(2500)
-        await page.evaluate(COOKIE_KILLER_JS)
+
+        # Only execute the Cookie Killer if JS is enabled!
+        if req.js_enabled:
+            try:
+                await page.evaluate(COOKIE_KILLER_JS)
+            except Exception as e:
+                print(f"[warn] Failed to execute Cookie Killer: {e}")
 
         result = {"title": await page.title(), "final_url": page.url}
         if req.extract_text:

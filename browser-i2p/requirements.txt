@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+playwright
+readability-lxml
+html2text
+pydantic
