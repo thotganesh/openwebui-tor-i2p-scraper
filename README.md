@@ -1,31 +1,92 @@
-```markdown
-# Open WebUI Tor & I2P Stealth Web Scraper 🕵️‍♂️🕷️
+<div align="center">
 
-A robust, triple-path web scraping infrastructure built for local AI models (specifically designed as tools for **Open WebUI**). It provides three distinct Playwright-based browser containers that feed clean, optimized Markdown text to your LLM, saving RAM, reducing token usage, bypassing anti-bot measures, and ensuring total operational security across Clearnet, Tor, and I2P Darknets.
+# 🕵️‍♂️ Open WebUI Tor & Stealth Web Scraper 🕷️
+
+**A robust, dual-path web scraping infrastructure for local AI models.**
+
+Two Playwright-based browser containers that feed clean, optimized Markdown to your LLM —
+saving RAM, cutting token usage and bypassing anti-bot measures.
+
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![Playwright](https://img.shields.io/badge/Playwright-1.48.0-2EAD33?logo=playwright&logoColor=white)
+![Python](https://img.shields.io/badge/Python-FastAPI-3776AB?logo=python&logoColor=white)
+![Tor](https://img.shields.io/badge/Tor-Snowflake-7D4698?logo=torproject&logoColor=white)
+![Open WebUI](https://img.shields.io/badge/Open%20WebUI-Tools-black)
+
+</div>
+
+Built specifically as tools for **Open WebUI**.
+
+---
+
+## 📑 Table of Contents
+
+- [🌟 Core Features](#-core-features)
+- [🧩 Open WebUI Tools](#-open-webui-tools)
+- [🏗️ Architecture](#️-architecture)
+- [📖 Complete Tutorial](#-complete-tutorial)
+  - [Prerequisites](#prerequisites)
+  - [Folder structure](#folder-structure)
+  - [1. tor-proxy: Tor + Snowflake](#1-tor-proxy-tor--snowflake)
+  - [2. browser-tor: anonymity via Tor](#2-browser-tor-anonymity-via-tor)
+  - [3. browser-clear: normal navigation with stealth](#3-browser-clear-normal-navigation-with-stealth)
+  - [4. docker-compose.yml](#4-docker-composeyml)
+  - [5. Build and startup](#5-build-and-startup)
+  - [6. Verification: test battery](#6-verification-test-battery)
+  - [7. Integration with OpenWebUI](#7-integration-with-openwebui)
+  - [8. Intelligent text extraction](#8-intelligent-text-extraction)
+  - [9. Troubleshooting](#9-troubleshooting)
+  - [10. Useful commands](#10-useful-commands)
+
+---
 
 ## 🌟 Core Features
 
-1. **Triple Browsing Paths:**
-   * **Clear Browser (Chromium):** Uses `playwright-stealth` and dynamic media blocking to bypass common anti-bot challenges (like Cloudflare) using your real IP.
-   * **Tor Browser (Firefox):** Hardened against WebRTC leaks, routes traffic exclusively through the Tor network using the **Snowflake** pluggable transport (bypassing ISP Tor blocks). Generates a new Tor circuit on demand via `stem`.
-   * **I2P Browser (Firefox):** Completely isolated Garlic Routing via a local `i2pd` proxy to securely explore `.i2p` eepsites with zero IP leak risk.
-2. **Dynamic OpSec & JavaScript Control:** Granular control over JavaScript execution directly from the AI prompt to instantly mitigate browser fingerprinting and zero-day exploits on Darknets.
-3. **GDPR/Cookie Killer:** Injects JavaScript to dynamically detect and destroy intrusive Consent Management Platforms (CMPs) and paywalls before text extraction.
-4. **Smart Extraction:** Uses Mozilla Readability and `html2text` to strip away menus, ads, and sidebars, delivering only the core article in pure Markdown. Includes a fallback mechanism for homepages and search engines.
-5. **Token & RAM Optimized:** Conditionally blocks heavy media (images, videos, fonts) at the network level via Playwright routing.
+| | Feature | Description |
+|---|---|---|
+| 🌐 | **Dual Browsing Paths** | Two independent browsers, one for normal sites and one for anonymous browsing |
+| 🍪 | **GDPR/Cookie Killer** | Injects JavaScript to detect and destroy intrusive CMPs and paywalls before extraction |
+| 🧠 | **Smart Extraction** | Mozilla Readability + `html2text` deliver only the core article in pure Markdown |
+| ⚡ | **Token & RAM Optimized** | Heavy media (images, videos, fonts) blocked at network level via Playwright routing |
+
+### 🌐 Dual Browsing Paths
+
+- **Clear Browser (Chromium)** — uses `playwright-stealth` and dynamic media blocking to bypass common anti-bot challenges (like Cloudflare) with your real IP.
+- **Tor Browser (Firefox)** — hardened against WebRTC leaks, routes traffic exclusively through the Tor network using the **Snowflake** pluggable transport (bypassing ISP Tor blocks). Generates a new Tor circuit on demand via `stem`.
+
+### 🍪 GDPR/Cookie Killer
+
+Dynamically detects and destroys Consent Management Platforms (CMPs) and paywalls before text extraction.
+
+### 🧠 Smart Extraction
+
+Strips away menus, ads and sidebars, delivering only the core article as pure Markdown. Includes a fallback mechanism for homepages and search engines.
+
+### ⚡ Token & RAM Optimized
+
+Conditionally blocks heavy media at the network level, so pages load faster and your model reads fewer tokens.
+
+---
 
 ## 🧩 Open WebUI Tools
 
-This project ships as **three Open WebUI tools that work together**. Ready-to-import files
-are in [`openwebui-tools/`](openwebui-tools/):
+This project ships as **two Open WebUI tools that work together**. Ready-to-import files are in [`openwebui-tools/`](openwebui-tools/):
 
 | Tool | File | Purpose |
 |---|---|---|
 | **Web Browser (Clear)** | [`web_browser_clear.py`](openwebui-tools/web_browser_clear.py) | Normal sites via headless Chromium + stealth |
-| **Web Browser (Tor)** | [`web_browser_tor.py`](openwebui-tools/web_browser_tor.py) | Anonymous browsing + .onion via Tor/Snowflake |
-| **Web Browser (I2P)** | [`web_browser_i2p.py`](openwebui-tools/web_browser_i2p.py) | Garlic Routing for .i2p eepsites via local i2pd |
+| **Web Browser (Tor/Anonymous)** | [`web_browser_tor.py`](openwebui-tools/web_browser_tor.py) | Anonymous browsing + `.onion` via Tor/Snowflake |
 
-> ⚠️ **All tools are required.** They are the pillars of the same stack: install all of them in Open WebUI and enable them in your chat.
+> [!IMPORTANT]
+> **Both tools are required.** They are the two halves of the same stack: the Clear tool talks to `browser-clear`, the Tor tool to `browser-tor`. Install both.
+
+### 📥 How to install
+
+1. In OpenWebUI go to **Admin → Workspace → Tools → new tool**
+2. Paste the content of each file (one tool per file)
+3. Enable both tools in your chat and make sure your model supports function calling
+
+---
 
 ## 🏗️ Architecture
 
@@ -34,34 +95,32 @@ are in [`openwebui-tools/`](openwebui-tools/):
                     │   OpenWebUI (AI)    │
                     └──────────┬──────────┘
                                │ ai-net (Docker bridge)
-          ┌────────────────────┼────────────────────┐
-          │                    │                    │
-┌─────────▼──────┐  ┌──────────▼─────┐  ┌───────────▼─────┐
-│ browser-clear  │  │  browser-tor   │  │   browser-i2p   │
-│ Chromium       │  │  Firefox       │  │   Firefox       │
-│ port 8080/8082 │  │  port 8081     │  │   port 8083     │
-└────────────────┘  └──────────┬─────┘  └───────────┬─────┘
-                               │                    │
-                    ┌──────────▼─────┐  ┌───────────▼─────┐
-                    │   tor-proxy    │  │    i2p-proxy    │
-                    │   Snowflake    │  │   i2pd router   │
-                    └────────────────┘  └─────────────────┘
-
+              ┌────────────────┼────────────────┐
+              │                │                │
+    ┌─────────▼──────┐  ┌──────▼───────┐  ┌─────▼─────────┐
+    │ browser-clear  │  │ browser-tor  │  │   tor-proxy   │
+    │ Chromium       │  │ Firefox      │──▶ Snowflake     │
+    │ port 8080/8082 │  │ port 8081    │  │ SOCKS  :9150  │
+    │                │  │              │  │ CTRL   :9151  │
+    └────────────────┘  └──────────────┘  └───────────────┘
 ```
 
-> All traffic runs on the internal Docker network `ai-net`: no Tor or I2P proxy ports are exposed to the outside.
+> [!NOTE]
+> All traffic runs on the internal Docker network `ai-net`: no Tor port is exposed to the outside.
+
+---
 
 ## 📖 Complete Tutorial
 
-> Build the stack from scratch: Tor with Snowflake, I2P Garlic Routing, anonymous browser and "clear" browser with intelligent text extraction, integrated as tools for a local AI on OpenWebUI.
+> Build the stack from scratch: Tor with Snowflake, anonymous browser and "clear" browser with intelligent text extraction, integrated as tools for a local AI on OpenWebUI.
 
 ### Prerequisites
 
-* A VPS with Docker and Docker Compose (the `docker compose` command)
-* **Outgoing UDP open**: Snowflake negotiates via WebRTC/ICE, which uses UDP. If the provider blocks it, Tor stays stuck in bootstrap
-* A Docker network shared with OpenWebUI, here called `ai-net`. If it doesn't exist: `docker network create ai-net`
-* Free ports on the host: `8081` (browser-tor), `8082` (browser-clear), and `8083` (browser-i2p)
-* OpenWebUI already running and connected to `ai-net`
+- 🖥️ A VPS with Docker and Docker Compose (the `docker compose` command)
+- 📡 **Outgoing UDP open**: Snowflake negotiates via WebRTC/ICE, which uses UDP. If the provider blocks it, Tor stays stuck in bootstrap
+- 🔗 A Docker network shared with OpenWebUI, here called `ai-net`. If it doesn't exist: `docker network create ai-net`
+- 🔌 Free ports on the host: `8081` (browser-tor) and `8082` (browser-clear)
+- 🤖 OpenWebUI already running and connected to `ai-net`
 
 ### Folder structure
 
@@ -74,36 +133,28 @@ are in [`openwebui-tools/`](openwebui-tools/):
 ├── browser-tor/
 │   ├── Dockerfile
 │   └── app.py
-├── browser-clear/
-│   ├── Dockerfile
-│   └── app.py
-├── browser-i2p/
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   └── app.py
-└── i2p-data/
-
+└── browser-clear/
+    ├── Dockerfile
+    └── app.py
 ```
 
 ```bash
-mkdir -p ~/ai-stack/{tor-snowflake,browser-tor,browser-clear,browser-i2p,i2p-data}
-# VITAL: i2pd runs as non-root, it needs permissions to write its addressbook
-chmod -R 777 ~/ai-stack/i2p-data
+mkdir -p ~/ai-stack/{tor-snowflake,browser-tor,browser-clear}
 cd ~/ai-stack
-
 ```
 
 ---
 
 ### 1. tor-proxy: Tor + Snowflake
 
-#### 1.1 Dockerfile (multi-stage) — [`tor-snowflake/Dockerfile`](https://www.google.com/search?q=tor-snowflake/Dockerfile)
+#### 1.1 Dockerfile (multi-stage) — [`tor-snowflake/Dockerfile`](tor-snowflake/Dockerfile)
 
 ```dockerfile
 # --- Stage 1: build of snowflake-client ---
 FROM golang:1.23-bookworm AS builder
+# Allows Go to download by itself the toolchain required by the project's go.mod
 ENV GOTOOLCHAIN=auto
-RUN git clone [https://git.torproject.org/pluggable-transports/snowflake.git](https://git.torproject.org/pluggable-transports/snowflake.git) /tmp/snowflake \
+RUN git clone https://git.torproject.org/pluggable-transports/snowflake.git /tmp/snowflake \
     && cd /tmp/snowflake/client \
     && go build -o /usr/local/bin/snowflake-client .
 # --- Stage 2: final image, runtime only ---
@@ -115,98 +166,86 @@ COPY --from=builder /usr/local/bin/snowflake-client /usr/local/bin/snowflake-cli
 RUN chmod +x /usr/local/bin/snowflake-client
 EXPOSE 9150
 CMD ["tor", "-f", "/etc/tor/torrc"]
-
 ```
+
+> [!NOTE]
+> The Snowflake repo requires a very recent Go (1.25.x). With `golang:1.23` + `GOTOOLCHAIN=auto`, Go downloads the right toolchain by itself. The final stage contains only the compiled binary: the image stays lightweight.
 
 #### 1.2 ControlPort password
 
-Generate the Tor ControlPort hash:
+The ControlPort is used to ask Tor for a new circuit (NEWNYM) before each request. Generate the hash:
 
 ```bash
 docker run --rm debian:bookworm-slim bash -c \
   "apt-get update -qq && apt-get install -y -qq tor >/dev/null && tor --hash-password 'YourSecurePassword'"
-# copy the hash starting with 16: into the torrc
-
+# the last printed line is the hash, like: 16:AF97...  (copy it into the torrc)
 ```
 
-#### 1.3 torrc — [`tor-snowflake/torrc`](https://www.google.com/search?q=tor-snowflake/torrc)
+Copy the hash (`16:...`) into the torrc. The same password in plain text goes into `CONTROL_PASSWORD` inside [`browser-tor/app.py`](browser-tor/app.py).
+
+#### 1.3 torrc — [`tor-snowflake/torrc`](tor-snowflake/torrc)
 
 ```ini
 SocksPort 0.0.0.0:9150
 UseBridges 1
 ClientTransportPlugin snowflake exec /usr/local/bin/snowflake-client \
-  -url [https://snowflake-broker.torproject.net.global.prod.fastly.net/](https://snowflake-broker.torproject.net.global.prod.fastly.net/) \
+  -url https://snowflake-broker.torproject.net.global.prod.fastly.net/ \
   -front cdn.sstatic.net \
   -ice stun:stun.l.google.com:19302,stun:stun.antisip.com:3478,stun:stun.bluesip.net:3478,stun:stun.dus.net:3478,stun:stun.epygi.com:3478,stun:stun.sonetel.com:3478,stun:stun.uls.co.za:3478,stun:stun.voipgate.com:3478,stun:stun.voys.nl:3478
-Bridge snowflake 192.0.2.3:80 2B280B23E1107BB62ABFC40DDCC8824814F80A72 fingerprint=2B280B23E1107BB62ABFC40DDCC8824814F80A72 url=[https://snowflake-broker.torproject.net.global.prod.fastly.net/](https://snowflake-broker.torproject.net.global.prod.fastly.net/) fronts=foursquare.com,github.githubassets.com ice=stun:stun.l.google.com:19302,stun:stun.antisip.com:3478,stun:stun.bluesip.net:3478,stun:stun.dus.net:3478,stun:stun.epygi.com:3478,stun:stun.sonetel.com:3478,stun:stun.uls.co.za:3478,stun:stun.voipgate.com:3478,stun:stun.voys.nl:3478 utls-imitate=hellorandomizedalpn
+Bridge snowflake 192.0.2.3:80 2B280B23E1107BB62ABFC40DDCC8824814F80A72 fingerprint=2B280B23E1107BB62ABFC40DDCC8824814F80A72 url=https://snowflake-broker.torproject.net.global.prod.fastly.net/ fronts=foursquare.com,github.githubassets.com ice=stun:stun.l.google.com:19302,stun:stun.antisip.com:3478,stun:stun.bluesip.net:3478,stun:stun.dus.net:3478,stun:stun.epygi.com:3478,stun:stun.sonetel.com:3478,stun:stun.uls.co.za:3478,stun:stun.voipgate.com:3478,stun:stun.voys.nl:3478 utls-imitate=hellorandomizedalpn
 ControlPort 0.0.0.0:9151
 HashedControlPassword 16:PASTE_THE_GENERATED_HASH_HERE
-
 ```
+
+> [!WARNING]
+> The `-ice` and `Bridge` lines are **one single line each**. Replace `PASTE_THE_GENERATED_HASH_HERE` with the generated hash. The IP `192.0.2.3` in the Bridge line is a placeholder from the official documentation: with Snowflake it doesn't matter, because the client connects to the broker via domain fronting and then negotiates with a volunteer proxy via WebRTC.
 
 ---
 
-### 2. browser-tor: anonymity via Tor — [`browser-tor/`](https://www.google.com/search?q=browser-tor/)
+### 2. browser-tor: anonymity via Tor
+
+📁 [`browser-tor/`](browser-tor/)
 
 ```dockerfile
-FROM [mcr.microsoft.com/playwright/python:v1.48.0-jammy](https://mcr.microsoft.com/playwright/python:v1.48.0-jammy)
+FROM mcr.microsoft.com/playwright/python:v1.48.0-jammy
 WORKDIR /app
 RUN pip install fastapi uvicorn httpx playwright==1.48.0 stem readability-lxml html2text lxml
 COPY app.py /app/app.py
 EXPOSE 8081
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8081"]
-
 ```
 
-What it does:
+What it does ([`browser-tor/app.py`](browser-tor/app.py)):
 
-* **Hardened Firefox**: `privacy.resistFingerprinting`, viewport 1000x900, UTC timezone.
-* **WebRTC disabled**: prevents ICE/STUN leaks.
-* **New circuit per request**: NEWNYM via ControlPort (`stem`).
+- 🦊 **Hardened Firefox**: `privacy.resistFingerprinting` + letterboxing reduce the browser's uniqueness; viewport 1000x900, UTC timezone and en-US language are values common among Tor users
+- 🚫 **WebRTC disabled**: with WebRTC enabled the real IP leaks via ICE/STUN, bypassing the SOCKS proxy
+- 🔄 **New circuit per request**: NEWNYM via ControlPort (Playwright doesn't support authentication on SOCKS5, so random username/password aren't used; `stem` requires a literal IP, hence `socket.gethostbyname`)
+- 📝 **Text extraction**: Readability + html2text fallback (see [section 8](#8-intelligent-text-extraction))
 
 ---
 
-### 3. browser-clear: normal navigation with stealth — [`browser-clear/`](https://www.google.com/search?q=browser-clear/)
+### 3. browser-clear: normal navigation with stealth
+
+📁 [`browser-clear/`](browser-clear/)
 
 ```dockerfile
-FROM [mcr.microsoft.com/playwright/python:v1.48.0-jammy](https://mcr.microsoft.com/playwright/python:v1.48.0-jammy)
+FROM mcr.microsoft.com/playwright/python:v1.48.0-jammy
 WORKDIR /app
 RUN pip install fastapi uvicorn playwright-stealth httpx playwright==1.48.0 readability-lxml html2text lxml
 COPY app.py /app/app.py
 EXPOSE 8080
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080"]
-
 ```
 
-What it does:
-
-* **Stealth**: `Stealth().use_async(async_playwright())` masks automation signals.
-* **WebRTC intentionally enabled**: mimics real user behavior.
+- 🥷 **Stealth**: `Stealth().use_async(async_playwright())` (playwright-stealth 2.x) masks the typical automation signals
+- 📶 **WebRTC intentionally enabled**: a real Chrome always has it on; here the real IP isn't a secret to protect
+- 🖼️ **`block_media` enabled by default** for speed and RAM saving; with `false` it loads everything like a real user (useful against aggressive anti-bots)
 
 ---
 
-### 4. browser-i2p & proxy: Garlic Routing — [`browser-i2p/`](https://www.google.com/search?q=browser-i2p/)
+### 4. docker-compose.yml
 
-```dockerfile
-FROM [mcr.microsoft.com/playwright/python:v1.40.0-jammy](https://mcr.microsoft.com/playwright/python:v1.40.0-jammy)
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-RUN playwright install firefox
-COPY . .
-EXPOSE 8083
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8083"]
-
-```
-
-What it does:
-
-* Relies on an isolated `i2pd` router container.
-* Includes an "Airbag" `try...except` block to gracefully handle offline `.i2p` eepsites.
-
----
-
-### 5. docker-compose.yml — [`docker-compose.yml`](https://www.google.com/search?q=docker-compose.yml)
+📄 [`docker-compose.yml`](docker-compose.yml)
 
 ```yaml
 services:
@@ -235,72 +274,88 @@ services:
       - "127.0.0.1:8082:8080"
     restart: unless-stopped
 
-  i2p-proxy:
-    image: purplei2p/i2pd:latest
-    container_name: i2p-proxy
-    networks: [ai-net]
-    command: --httpproxy.address=0.0.0.0 --socksproxy.address=0.0.0.0
-    restart: unless-stopped
-    volumes:
-      - ./i2p-data:/home/i2pd/data
-
-  browser-i2p:
-    build: ./browser-i2p
-    container_name: browser-i2p
-    networks: [ai-net]
-    depends_on: [i2p-proxy]
-    ports:
-      - "127.0.0.1:8083:8083"
-    restart: unless-stopped
-
 networks:
   ai-net:
     external: true
-
 ```
+
+> [!IMPORTANT]
+> `ai-net` is `external: true`: the network already exists and is shared with OpenWebUI.
+> The ports are bound to `127.0.0.1`: **never publish Tor's 9150/9151**.
 
 ---
 
-### 6. Build and startup
+### 5. Build and startup
 
 ```bash
 cd ~/ai-stack
 docker compose build
 docker compose up -d
-docker compose ps                      # all five containers "Up"
+docker compose ps                      # all three "Up", no restart loop
 docker compose logs -f tor-proxy       # wait for "Bootstrapped 100% (done)"
-
 ```
 
-> [!IMPORTANT]
-> **I2P Warm-up Time:** The `i2pd` router requires 3-5 minutes on its very first boot to build Garlic Tunnels and populate its addressbook. Test it by running the curl command below against `http://stats.i2p` after 5 minutes.
+> [!NOTE]
+> The first build takes a few minutes (Snowflake compilation + Playwright image download, about 2 GB).
 
 ---
 
-### 7. Verification: test battery
+### 6. Verification: test battery
 
 ```bash
-# 1) browser-clear: must show IsTor:false with the VPS's real IP
-curl -s -X POST [http://127.0.0.1:8082/browse](http://127.0.0.1:8082/browse) -H "Content-Type: application/json" -d '{"url": "[https://check.torproject.org/api/ip](https://check.torproject.org/api/ip)"}'
+# 1) Tor's SOCKS works and the IP is anonymous
+docker run --rm --network ai-net curlimages/curl -s --socks5-hostname tor-proxy:9150 https://check.torproject.org/api/ip
 
-# 2) browser-tor: must show IsTor:true with an exit node IP
-curl -s -X POST [http://127.0.0.1:8081/browse](http://127.0.0.1:8081/browse) -H "Content-Type: application/json" -d '{"url": "[https://check.torproject.org/api/ip](https://check.torproject.org/api/ip)"}'
+# 2) browser-clear: must show IsTor:false with the VPS's real IP
+curl -s -X POST http://127.0.0.1:8082/browse -H "Content-Type: application/json" \
+  -d '{"url": "https://check.torproject.org/api/ip"}'
 
-# 3) browser-tor on a real .onion (DuckDuckGo)
-curl -s -X POST [http://127.0.0.1:8081/browse](http://127.0.0.1:8081/browse) -H "Content-Type: application/json" -d '{"url": "[http://duckduckgogg42xjoc72x3sjasowoarfbgcmvfimaftt6twagswzczad.onion](http://duckduckgogg42xjoc72x3sjasowoarfbgcmvfimaftt6twagswzczad.onion)"}'
+# 3) browser-tor: must show IsTor:true with an exit node IP
+curl -s -X POST http://127.0.0.1:8081/browse -H "Content-Type: application/json" \
+  -d '{"url": "https://check.torproject.org/api/ip"}'
 
-# 4) browser-i2p on an eepsite (stats.i2p)
-curl -s -X POST [http://127.0.0.1:8083/browse](http://127.0.0.1:8083/browse) -H "Content-Type: application/json" -d '{"url": "http://stats.i2p", "js_enabled": false}'
+# 4) browser-tor on a real .onion (DuckDuckGo)
+curl -s -X POST http://127.0.0.1:8081/browse -H "Content-Type: application/json" \
+  -d '{"url": "http://duckduckgogg42xjoc72x3sjasowoarfbgcmvfimaftt6twagswzczad.onion"}'
 
+# 5) Circuit rotation: NEWNYM has a rate limit of ~10 s
+curl -s -X POST http://127.0.0.1:8081/browse -H "Content-Type: application/json" \
+  -d '{"url": "https://check.torproject.org/api/ip"}'; echo; sleep 12
+curl -s -X POST http://127.0.0.1:8081/browse -H "Content-Type: application/json" \
+  -d '{"url": "https://check.torproject.org/api/ip"}'
+
+# 6) WebRTC diagnostic test (WebRTC deliberately re-enabled: must show the real IP leak)
+curl -s http://127.0.0.1:8081/webrtc-leak-check
 ```
+
+| Test | Expected result |
+|---|---|
+| Direct SOCKS | `{"IsTor":true,"IP":"..."}` |
+| browser-clear | `IsTor:false` with the VPS's real IP |
+| browser-tor | `IsTor:true`, exit node IP different from the VPS's |
+| browser-tor on .onion | HTTP 200 with title and text of the page |
+| Circuit rotation | Different exit IPs between the two requests |
+| webrtc-leak-check | `leaked_ips` with the real IP: proof that WebRTC must stay disabled |
+
+> [!NOTE]
+> Always use real URLs in tests: a placeholder URL returns a 404 that looks like a code problem.
 
 ---
 
-### 8. Integration with OpenWebUI
+### 7. Integration with OpenWebUI
 
-In OpenWebUI go to **Admin → Workspace → Tools → new tool**. Paste the content of each file (one tool per file).
+#### 7.1 Network and reachability
 
-#### 8.1 Tool 1: Clear Browser
+```bash
+docker inspect open-webui --format '{{json .NetworkSettings.Networks}}'   # ai-net must appear
+docker network connect ai-net open-webui                                  # only if missing
+docker exec open-webui curl -s -m 10 http://browser-clear:8080/health     # {"status":"ok"}
+docker exec open-webui curl -s -m 10 http://browser-tor:8081/health       # {"status":"ok"}
+```
+
+#### 7.2 Tool 1: normal browser
+
+In OpenWebUI: **Admin → Workspace → Tools → new tool**:
 
 ```python
 """
@@ -314,21 +369,26 @@ class Tools:
         self.base_url = "http://browser-clear:8080"
 
     async def browse_web(self, url: str, block_media: bool = True) -> str:
+        """
+        Browses a normal web page and extracts the text in Markdown.
+
+        :param url: Full URL to visit (e.g. https://example.com)
+        :param block_media: True blocks images/fonts/videos (faster). Set False if the site blocks bots.
+        """
         async with httpx.AsyncClient(timeout=90) as client:
             r = await client.post(f"{self.base_url}/browse", json={"url": url, "block_media": block_media})
             if r.status_code != 200:
                 return f"Error from the browser-service: HTTP {r.status_code}"
             data = r.json()
             return f"Title: {data.get('title')}\nFinal URL: {data.get('final_url')}\n\n{data.get('text', '')[:4000]}"
-
 ```
 
-#### 8.2 Tool 2: Tor Browser
+#### 7.3 Tool 2: Tor browser
 
 ```python
 """
 title: Web Browser (Tor/Anonymous)
-description: Naviga siti .onion o normali in forma completamente anonima tramite rete Tor (Snowflake)
+description: Browses .onion or normal sites anonymously via Tor (Snowflake), with a new circuit per request
 """
 import httpx
 
@@ -336,107 +396,93 @@ class Tools:
     def __init__(self):
         self.base_url = "http://browser-tor:8081"
 
-    async def browse_tor(self, url: str, block_media: bool = True, js_enabled: bool = True) -> str:
+    async def browse_tor(self, url: str, block_media: bool = True) -> str:
+        """
+        Browses a web page (including .onion) via the Tor network for complete anonymity.
+
+        :param url: Full URL to visit, including .onion addresses
+        :param block_media: True blocks images/fonts/videos (faster and lighter on Tor).
+        """
         async with httpx.AsyncClient(timeout=120) as client:
-            try:
-                r = await client.post(
-                    f"{self.base_url}/browse", 
-                    json={"url": url, "block_media": block_media, "js_enabled": js_enabled}
-                )
-                r.raise_for_status()
-                data = r.json()
-                return f"[TOR NETWORK | JS: {'ON' if js_enabled else 'OFF'}]\nTitolo: {data.get('title')}\nURL finale: {data.get('final_url')}\n\n{data.get('text', '')[:4000]}"
-            except Exception as e:
-                return f"Errore di connessione al nodo Tor locale: {e}"
-
+            r = await client.post(f"{self.base_url}/browse", json={"url": url, "block_media": block_media})
+            if r.status_code != 200:
+                return f"Error from the browser-service: HTTP {r.status_code}"
+            data = r.json()
+            return f"Title: {data.get('title')}\nFinal URL: {data.get('final_url')}\n\n{data.get('text', '')[:4000]}"
 ```
 
-#### 8.3 Tool 3: I2P Browser
+> [!NOTE]
+> Inside Docker, services communicate on internal ports (`browser-clear:8080`, `browser-tor:8081`), not on those mapped to the host. The `[:4000]` limit keeps token usage under control: increase it if you need longer extracts.
 
-```python
-"""
-title: Web Browser (I2P)
-description: Naviga eepsites (.i2p) in modo sicuro e isolato tramite rete I2P (Garlic Routing)
-"""
-import httpx
+#### 7.4 Avoiding conflicts with native Web Search
 
-class Tools:
-    def __init__(self):
-        self.base_url = "http://browser-i2p:8083"
-
-    async def browse_i2p(self, url: str, block_media: bool = True, js_enabled: bool = True) -> str:
-        async with httpx.AsyncClient(timeout=130) as client:
-            try:
-                r = await client.post(
-                    f"{self.base_url}/browse", 
-                    json={"url": url, "block_media": block_media, "js_enabled": js_enabled}
-                )
-                r.raise_for_status()
-                data = r.json()
-                return f"[I2P NETWORK | JS: {'ON' if js_enabled else 'OFF'}]\nTitolo: {data.get('title')}\nURL finale: {data.get('final_url')}\n\n{data.get('text', '')[:4000]}"
-            except Exception as e:
-                return f"Errore di connessione al router I2P locale o timeout: {e}"
-
-```
-
-#### 8.4 Avoiding conflicts with native Web Search
-
-Disable the integrated Web Search (Admin Panel → Settings → Web Search → OFF) to prevent conflicts. Update your System Prompt:
+If the integrated Web Search is enabled, disable it (**Admin Panel → Settings → Web Search → OFF**): with two competing tools, small models choose inconsistently. Then, in the global System Prompt:
 
 ```text
 To browse normal websites ALWAYS use the browse_web tool.
-For .onion sites ALWAYS use the browse_tor tool.
-For .i2p eepsites ALWAYS use the browse_i2p tool.
-You have no other way to access the internet. By default, keep JavaScript enabled unless the user explicitly asks for maximum security.
-
+For .onion sites, or when the user explicitly requests anonymity, ALWAYS use the browse_tor tool.
+You have no other way to access the internet.
 ```
 
+If the model doesn't call the tools, check that they are enabled in the chat and that the model supports function calling (model settings → Capabilities).
+
 ---
 
-### 9. Intelligent text extraction
+### 8. Intelligent text extraction
 
-Four mechanisms, present in all browsers:
+Four mechanisms, present in both browsers:
 
-1. **Resource blocking** (`block_media`): `page.route("**/*.{png,jpg,...}")` stops media before downloading.
-2. **Cookie killer**: removes the containers of the main CMPs from the DOM and restores scrolling.
-3. **Two-level extraction**: level 1 Readability; level 2 fallback html2text on all HTML. You never get a hard error.
-4. **`domcontentloaded` + fixed wait (2500 ms)** instead of `networkidle`: ad-filled sites never reach the "silent network".
+1. **Resource blocking** (`block_media`): `page.route("**/*.{png,jpg,...}")` stops images, fonts and videos before they download → faster pages and less memory. On sites with serious anti-bot, disable it: a Chrome that never loads images is anomalous behavior.
+2. **Cookie killer**: removes the containers of the main CMPs (OneTrust, Cookiebot, Quantcast, TrustArc...) from the DOM and restores scrolling. It doesn't bypass server-side paywalls.
+3. **Two-level extraction**: level 1 Readability (structured article); level 2 fallback html2text on all the HTML (homepages, indexes, search results). You never get a hard error.
+4. **`domcontentloaded` + fixed wait (2500 ms)** instead of `networkidle`: ad-filled sites never reach the "silent network" and would go into timeout.
 
 > [!WARNING]
-> Some CMPs have anti-tamper protection. In those cases, hide with `el.style.setProperty('display','none','important')` instead of removing.
+> Some CMPs have anti-tamper protection: on repubblica.it (Iubenda), removing the banner with `el.remove()` emptied the entire page (HTML from 496,335 to 15 characters). In those cases, hide with `el.style.setProperty('display','none','important')` instead of removing.
 
 ---
 
-### 10. Troubleshooting
+### 9. Troubleshooting
 
 | Error / symptom | Cause | Solution |
-| --- | --- | --- |
-| I2P container `Restarting (139)` | Permission denied on `/home/i2pd/data` | Run `chmod -R 777 i2p-data` |
-| I2P `NS_ERROR_UNKNOWN_PROXY_HOST` | The proxy container is down/inaccessible | Check I2P permissions and restart |
-| I2P `Host not found in addressbook` | I2P router is still warming up | Wait 5 mins, visit `http://stats.i2p` |
+|---|---|---|
 | `Error parsing Bridge address 'auto'` | Incorrect or leftover torrc syntax | Rewrite the torrc from scratch |
-| `general SOCKS server failure` | obfs4 bridge with made-up cert | Use Snowflake with the official bridge line |
-| `invalid go version` | Image's Go too old | Multi-stage with golang and `ENV GOTOOLCHAIN=auto` |
+| `general SOCKS server failure` (obfs4) | obfs4 bridge with made-up fingerprint/cert | Use Snowflake with the official bridge line |
+| `invalid go version '1.25.12'` / `requires go >= 1.25.12` | Image's Go too old | Multi-stage with golang and `ENV GOTOOLCHAIN=auto` |
+| `pip3: not found` | Node.js variant Playwright image | Use `mcr.microsoft.com/playwright/python` |
+| `No module named 'playwright'` | The Python image doesn't include the package | Explicit `pip install playwright==1.48.0` |
+| `Executable doesn't exist ... chrome-headless-shell` | Python package newer than the image's browsers | Pin `playwright==` to the image version |
 | `port is already allocated` | Host port already used | Change the mapping (e.g. `8082:8080`) |
-| `RTCPeerConnection is not defined` | With WebRTC disabled the API doesn't exist | Leak test with WebRTC re-enabled |
-| `Browser does not support socks5 proxy auth` | Playwright lacks SOCKS auth | Isolate circuits with ControlPort and NEWNYM |
+| `cannot import name 'stealth_async'` | playwright-stealth 2.x has a new API | `Stealth().use_async(async_playwright())` |
+| `RTCPeerConnection is not defined` | With WebRTC disabled the API doesn't exist | Leak test with WebRTC re-enabled (dedicated endpoint) |
+| `Browser does not support socks5 proxy authentication` | Playwright doesn't support user/password on SOCKS5 | Isolate circuits with ControlPort and NEWNYM |
 | `Invalid IP address: tor-proxy` | stem requires a literal IP | `socket.gethostbyname("tor-proxy")` |
+| `Document is empty` / `Unparseable` | Readability doesn't find an article | html2text fallback on all the HTML |
+| Page emptied after the cookie killer | The CMP detects the banner removal (anti-tamper) | Hide with `display:none` instead of `remove()` |
+| `Cannot read properties of null (reading 'style')` | `document.body` absent during a reload | `if (document.body)` + try/except |
+| Cookie banner still in the text | Case-sensitive selectors or CMP not in the list | Add the site's CMP IDs (or selectors with the `i` flag) |
+| 404 response in tests | Placeholder URL taken literally | Use a real URL |
+| curl responds with 0 bytes | Error 500 hidden by `curl -s` | `curl -v` and `docker compose logs <service>` |
 
 ---
 
-### 11. Useful commands
+### 10. Useful commands
 
 ```bash
 cd ~/ai-stack
 docker compose ps                                        # container status
-docker compose logs -f browser-tor                       # Tor logs in real time
-docker compose logs -f i2p-proxy                         # monitor I2P tunnels
-docker compose build browser-clear browser-tor browser-i2p
+docker compose logs -f browser-tor                       # logs in real time
+docker compose logs browser-clear --tail 30 | grep -i warn
+# after modifying an app.py / Dockerfile:
+docker compose build browser-clear browser-tor && docker compose up -d browser-clear browser-tor
 docker compose restart tor-proxy                         # restart only Tor
-docker compose down                                      # stop everything
-
+docker compose down                                      # stop everything (the ai-net network remains)
 ```
 
-```
+---
 
-```
+<div align="center">
+
+⭐ If this project helps you, consider leaving a star on the repo!
+
+</div>
