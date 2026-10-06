@@ -46,6 +46,35 @@ services:
     ports:
       - "127.0.0.1:8083:8083"
     restart: unless-stopped
+ 
+  browser-http:
+    build: ./browser-http
+    container_name: browser-http
+    networks: [ai-net]
+    ports:
+      - "127.0.0.1:8084:8084"
+    restart: unless-stopped
+
+  solverr:
+    image: ghcr.io/unseensnick/solverr:latest
+    container_name: solverr
+    networks: [ai-net]
+    ports:
+      - "127.0.0.1:8191:8191"
+    shm_size: 512mb
+    restart: unless-stopped
+  
+  searxng:
+    image: searxng/searxng:latest
+    container_name: searxng
+    networks: [ai-net]
+    ports:
+      - "127.0.0.1:8888:8080"
+    volumes:
+      - ./searxng-config:/etc/searxng:rw
+    environment:
+      - SEARXNG_BASE_URL=http://searxng:8080/
+    restart: unless-stopped
 
 networks:
   ai-net:

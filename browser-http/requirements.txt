@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+curl_cffi
+readability-lxml
+html2text
+lxml
