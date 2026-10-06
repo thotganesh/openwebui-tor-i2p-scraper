@@ -297,7 +297,7 @@ The ControlPort is used to ask Tor for a new circuit (NEWNYM) before each reques
 ```bash
 docker run --rm debian:bookworm-slim bash -c \
   "apt-get update -qq && apt-get install -y -qq tor >/dev/null && tor --hash-password 'YourSecurePassword'"
-# the last printed line is the hash, like: 16:AF97...  (copy it into the torrc)
+# the last printed line is the hash, like: 16:AF97...  (copy it into .env as TOR_CONTROL_HASH)
 ```
 
 Copy the hash (16:...) into .env as TOR_CONTROL_HASH. The same password in plain text goes into .env as TOR_CONTROL_PASSWORD.
