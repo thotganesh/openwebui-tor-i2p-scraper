@@ -7,13 +7,14 @@ import html2text
 
 app = FastAPI()
 
+
 class BrowseRequest(BaseModel):
     url: str
     extract_text: bool = True
     block_media: bool = True
     js_enabled: bool = True
 
-# i2pd espone il proxy HTTP sulla porta 4444
+
 I2P_PROXY = {"server": "http://i2p-proxy:4444"}
 
 FIREFOX_PREFS = {
@@ -27,34 +28,64 @@ FIREFOX_PREFS = {
     "device.sensors.enabled": False,
 }
 
+
+# Extended cookie killer (aligned with browser-clear)
 COOKIE_KILLER_JS = """
 async () => {
-    const KNOWN_CMP_SELECTORS = [
-        '#onetrust-banner-sdk', '.cc-window', '.qc-cmp2-container',
-        '[class*="cookie-banner"]', '[id*="cookie-consent"]'
+    const CMP_SELECTORS = [
+        '#onetrust-banner-sdk', '#onetrust-consent-sdk',
+        '#cookiebot', '#CybotCookiebotDialog',
+        '.qc-cmp2-container', '#qc-cmp2-container',
+        '#truste-consent-track', '.truste_box_overlay',
+        '.cc-window', '.fc-consent-root', '#cookie-notice',
+        '.paywall', '[class*="cookie-banner"]', '[id*="cookie-consent"]',
+        '#iubenda-cs-banner', '.iubenda-cs-container', '.iubenda-cs-visible',
+        '[class*="iubenda"]', 'iframe[src*="iubenda"]',
+        '#didomi-host', '#didomi-notice', '.didomi-popup-backdrop',
+        '[class*="didomi"]',
+        '.cmplz-cookiebanner', '.cmplz-manage-consent',
+        '.cky-consent-container', '.cky-modal',
+        '.cli-modal-backdrop', '#cookie-law-info-bar',
+        '.termly-cookie-policy',
+        '.klaro .cookie-modal', '.klaro .cookie-notice',
+        '#ccpa-banner',
+        '.fc-dialog-overlay',
+        '#gdpr-banner', '.gdpr-banner',
     ];
-    KNOWN_CMP_SELECTORS.forEach(sel => {
-        document.querySelectorAll(sel).forEach(el => el.remove());
+    CMP_SELECTORS.forEach(sel => {
+        document.querySelectorAll(sel).forEach(el => {
+            el.style.setProperty('display', 'none', 'important');
+            el.style.setProperty('visibility', 'hidden', 'important');
+        });
     });
-    document.body.style.overflow = 'auto';
+    document.documentElement.style.setProperty('overflow', 'auto', 'important');
+    if (document.body) {
+        document.body.style.setProperty('overflow', 'auto', 'important');
+    }
+    return 'cookie-killer: done';
 }
 """
+
 
 def pulisci_testo(html_content: str) -> str:
     h = html2text.HTML2Text()
     h.ignore_links = False
     h.ignore_images = True
     h.body_width = 0
+
     try:
         doc = Document(html_content)
         testo = h.handle(doc.summary()).strip()
-        if testo: return testo
+        if testo:
+            return testo
     except Exception:
         pass
+
     try:
         return h.handle(html_content).strip()
     except Exception as e:
-        return f"Errore estrazione: {e}"
+        return f"Extraction error: {e}"
+
 
 @app.post("/browse")
 async def browse(req: BrowseRequest):
@@ -73,26 +104,28 @@ async def browse(req: BrowseRequest):
         page = await context.new_page()
 
         if req.block_media:
-            await page.route("**/*.{png,jpg,jpeg,gif,svg,woff,woff2,mp4,webm}", lambda route: route.abort())
+            await page.route(
+                "**/*.{png,jpg,jpeg,gif,svg,woff,woff2,mp4,webm}",
+                lambda route: route.abort(),
+            )
 
-        # --- AIRBAG: Blocco try/except per gestire i siti offline o I2P non sincronizzato ---
+        # AIRBAG: catch navigation errors
         try:
             await page.goto(req.url, wait_until="domcontentloaded", timeout=120000)
             await page.wait_for_timeout(2500)
         except Exception as e:
             await browser.close()
             return {
-                "title": "Errore di Rete I2P", 
-                "final_url": req.url, 
-                "text": f"Sito I2P attualmente irraggiungibile o router I2P non ancora sincronizzato. Dettaglio: {e}"
+                "title": "I2P Network Error",
+                "final_url": req.url,
+                "text": f"I2P site currently unreachable or router not yet synced. Detail: {e}",
             }
-        
-        # Se il JS è abilitato, puliamo i popup
+
         if req.js_enabled:
             try:
                 await page.evaluate(COOKIE_KILLER_JS)
             except Exception as e:
-                print(f"[warn] Failed to execute Cookie Killer: {e}")
+                print(f"[warn] Cookie killer failed: {e}")
 
         result = {"title": await page.title(), "final_url": page.url}
         if req.extract_text:
@@ -100,3 +133,8 @@ async def browse(req: BrowseRequest):
 
         await browser.close()
         return result
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}

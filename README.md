@@ -300,7 +300,7 @@ docker run --rm debian:bookworm-slim bash -c \
 # the last printed line is the hash, like: 16:AF97...  (copy it into the torrc)
 ```
 
-Copy the hash (`16:...`) into the torrc. The same password in plain text goes into `TOR_CONTROL_PASSWORD` inside `.env`.
+Copy the hash (16:...) into .env as TOR_CONTROL_HASH. The same password in plain text goes into .env as TOR_CONTROL_PASSWORD.
 
 #### 1.3 torrc — [`tor-snowflake/torrc`](tor-snowflake/torrc)
 

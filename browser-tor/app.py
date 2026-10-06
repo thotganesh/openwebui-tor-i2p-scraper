@@ -11,6 +11,7 @@ import html2text
 
 app = FastAPI()
 
+
 class BrowseRequest(BaseModel):
     url: str
     wait_selector: str | None = None
@@ -18,8 +19,10 @@ class BrowseRequest(BaseModel):
     block_media: bool = True
     js_enabled: bool = True
 
+
 TOR_PROXY = {"server": "socks5://tor-proxy:9150"}
 CONTROL_PASSWORD = os.environ.get("TOR_CONTROL_PASSWORD")
+
 
 FIREFOX_PREFS = {
     "media.peerconnection.enabled": False,
@@ -35,43 +38,44 @@ FIREFOX_PREFS = {
     "media.navigator.enabled": False,
 }
 
-FIREFOX_PREFS_WEBRTC_TEST = dict(FIREFOX_PREFS)
-FIREFOX_PREFS_WEBRTC_TEST["media.peerconnection.enabled"] = True
 
-WEBRTC_LEAK_SCRIPT = """
-async () => {
-    if (typeof RTCPeerConnection === "undefined") return "DISABLED";
-    return new Promise((resolve) => {
-        const ips = new Set();
-        const pc = new RTCPeerConnection({iceServers: [{urls: "stun:stun.l.google.com:19302"}]});
-        pc.createDataChannel("");
-        pc.onicecandidate = (e) => {
-            if (!e.candidate) { resolve([...ips]); pc.close(); return; }
-            const match = e.candidate.candidate.match(/(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})/);
-            if (match) ips.add(match[1]);
-        };
-        pc.createOffer().then(o => pc.setLocalDescription(o));
-        setTimeout(() => { resolve([...ips]); pc.close(); }, 5000);
-    });
-}
-"""
-
+# Extended cookie killer (aligned with browser-clear)
 COOKIE_KILLER_JS = """
 async () => {
-    const KNOWN_CMP_SELECTORS = [
+    const CMP_SELECTORS = [
         '#onetrust-banner-sdk', '#onetrust-consent-sdk',
         '#cookiebot', '#CybotCookiebotDialog',
         '.qc-cmp2-container', '#qc-cmp2-container',
         '#truste-consent-track', '.truste_box_overlay',
         '.cc-window', '.fc-consent-root', '#cookie-notice',
-        '.paywall', '[class*="cookie-banner"]', '[id*="cookie-consent"]'
+        '.paywall', '[class*="cookie-banner"]', '[id*="cookie-consent"]',
+        '#iubenda-cs-banner', '.iubenda-cs-container', '.iubenda-cs-visible',
+        '[class*="iubenda"]', 'iframe[src*="iubenda"]',
+        '#didomi-host', '#didomi-notice', '.didomi-popup-backdrop',
+        '[class*="didomi"]',
+        '.cmplz-cookiebanner', '.cmplz-manage-consent',
+        '.cky-consent-container', '.cky-modal',
+        '.cli-modal-backdrop', '#cookie-law-info-bar',
+        '.termly-cookie-policy',
+        '.klaro .cookie-modal', '.klaro .cookie-notice',
+        '#ccpa-banner',
+        '.fc-dialog-overlay',
+        '#gdpr-banner', '.gdpr-banner',
     ];
-    KNOWN_CMP_SELECTORS.forEach(sel => {
-        document.querySelectorAll(sel).forEach(el => el.remove());
+    CMP_SELECTORS.forEach(sel => {
+        document.querySelectorAll(sel).forEach(el => {
+            el.style.setProperty('display', 'none', 'important');
+            el.style.setProperty('visibility', 'hidden', 'important');
+        });
     });
-    document.body.style.overflow = 'auto'; 
+    document.documentElement.style.setProperty('overflow', 'auto', 'important');
+    if (document.body) {
+        document.body.style.setProperty('overflow', 'auto', 'important');
+    }
+    return 'cookie-killer: done';
 }
 """
+
 
 def request_new_circuit():
     try:
@@ -79,16 +83,17 @@ def request_new_circuit():
         with Controller.from_port(address=tor_proxy_ip, port=9151) as controller:
             controller.authenticate(password=CONTROL_PASSWORD)
             controller.signal(Signal.NEWNYM)
-            print(f"[info] Nuovo circuito richiesto con successo (via {tor_proxy_ip})")
+            print(f"[info] New circuit requested via {tor_proxy_ip}")
     except Exception as e:
-        print(f"[warn] Impossibile richiedere nuovo circuito: {e}")
+        print(f"[warn] Could not request new circuit: {e}")
+
 
 def pulisci_testo(html_content: str) -> str:
     h = html2text.HTML2Text()
     h.ignore_links = False
-    h.ignore_images = True 
+    h.ignore_images = True
     h.body_width = 0
-    
+
     try:
         doc = Document(html_content)
         testo_pulito = h.handle(doc.summary()).strip()
@@ -96,11 +101,12 @@ def pulisci_testo(html_content: str) -> str:
             return testo_pulito
     except Exception:
         pass
-        
+
     try:
         return h.handle(html_content).strip()
     except Exception as e:
-        return f"Errore nell'estrazione del testo: {e}"
+        return f"Extraction error: {e}"
+
 
 @app.post("/browse")
 async def browse(req: BrowseRequest):
@@ -122,18 +128,29 @@ async def browse(req: BrowseRequest):
         page = await context.new_page()
 
         if req.block_media:
-            await page.route("**/*.{png,jpg,jpeg,gif,svg,woff,woff2,mp4,webm}", lambda route: route.abort())
+            await page.route(
+                "**/*.{png,jpg,jpeg,gif,svg,woff,woff2,mp4,webm}",
+                lambda route: route.abort(),
+            )
 
-        await page.goto(req.url, wait_until="domcontentloaded", timeout=90000)
-        
-        await page.wait_for_timeout(2500)
+        # Navigation with error handling (fix: .onion unreachable no longer 500)
+        try:
+            await page.goto(req.url, wait_until="domcontentloaded", timeout=60000)
+            await page.wait_for_timeout(2500)
+        except Exception as e:
+            await browser.close()
+            return {
+                "error": f"Navigation failed: {e}",
+                "title": "",
+                "final_url": req.url,
+                "text": "",
+            }
 
-        # Only execute the Cookie Killer if JS is enabled!
         if req.js_enabled:
             try:
                 await page.evaluate(COOKIE_KILLER_JS)
             except Exception as e:
-                print(f"[warn] Failed to execute Cookie Killer: {e}")
+                print(f"[warn] Cookie killer failed: {e}")
 
         result = {"title": await page.title(), "final_url": page.url}
         if req.extract_text:
@@ -142,23 +159,6 @@ async def browse(req: BrowseRequest):
         await browser.close()
         return result
 
-@app.get("/webrtc-leak-check")
-async def webrtc_leak_check():
-    async with async_playwright() as p:
-        browser = await p.firefox.launch(
-            headless=True,
-            proxy=TOR_PROXY,
-            firefox_user_prefs=FIREFOX_PREFS_WEBRTC_TEST,
-        )
-        page = await (await browser.new_context()).new_page()
-        await page.goto("data:text/html,<html><body></body></html>")
-        leaked_ips = await page.evaluate(WEBRTC_LEAK_SCRIPT)
-        await browser.close()
-        return {
-            "note": "Test con WebRTC volutamente riabilitato. In produzione (/browse) resta sempre disattivato.",
-            "leaked_ips": leaked_ips,
-            "leak_detected": len(leaked_ips) > 0,
-        }
 
 @app.get("/health")
 async def health():
