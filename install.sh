@@ -81,10 +81,10 @@ fi
 log "OpenWebUI found: ${OPENWEBUI_CONTAINER}"
 
 AVAIL_GB=$(df -BG "$HOME" | awk 'NR==2 {print $4}' | tr -d 'G')
-if [ "$AVAIL_GB" -lt 5 ]; then
-    warn "Only ${AVAIL_GB}GB free. Recommended: 5GB+. Continuing anyway..."
+if [ "$AVAIL_GB" -lt 35 ]; then
+    warn "Only ${AVAIL_GB}GB free. Recommended: 35GB+ (14GB images + 12GB build cache + 6.5GB OpenWebUI if colocated). Continuing anyway..."
 fi
-log "Disk space: ${AVAIL_GB}GB available"
+log "Disk space: ${AVAIL_GB}GB available (need ~35GB for the first install)"
 
 # ============================================================
 # STEP 2: Create directories
@@ -313,3 +313,19 @@ echo "  (the directory was created with curl, not git clone)"
 echo "  (existing .env and settings.yml are preserved)"
 echo ""
 log "Done."
+
+# Disk space hint
+echo ""
+info "Disk usage:"
+DISK_AVAIL=$(df -BG / | awk 'NR==2 {print $4}' | tr -d 'G')
+echo "  Free: ${DISK_AVAIL}GB"
+if docker system df >/dev/null 2>&1; then
+    BUILD_CACHE=$(docker system df 2>/dev/null | grep -i "build cache" | awk '{print $4}')
+    [ -n "$BUILD_CACHE" ] && echo "  Docker build cache: ${BUILD_CACHE}"
+fi
+echo ""
+info "To reclaim ~12 GB of build cache (next rebuild will be slower):"
+echo "  docker builder prune -f"
+echo ""
+info "To reclaim unused images:"
+echo "  docker image prune -f"

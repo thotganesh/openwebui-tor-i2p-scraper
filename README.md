@@ -232,7 +232,7 @@ CLEARNET  (tool: Web)                               DARKNET  (tool: Darknet)
 
 ### Option A — One-shot installer (recommended)
 
-**Requirements:** Docker + Docker Compose v2, `openssl`, `curl`, ~5 GB free disk, outgoing UDP open (Snowflake), and **OpenWebUI already running** in a container named `open-webui`.
+**Requirements:** Docker + Docker Compose v2, `openssl`, `curl`, **~35 GB free disk** (first install; drops to ~22 GB after `docker builder prune -f`), outgoing UDP open (Snowflake), and **OpenWebUI already running** in a container named `open-webui`.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/thotganesh/openwebui-tor-i2p-scraper/main/install.sh -o install.sh
@@ -319,7 +319,7 @@ Then install the two tools (see [How to install](#-how-to-install)) and run the 
 - 📡 **Outgoing UDP open**: Snowflake negotiates via WebRTC/ICE (UDP). If the provider blocks it, Tor stays stuck in bootstrap
 - 🔗 A Docker network shared with OpenWebUI, here called `ai-net`: `docker network create ai-net`
 - 🔌 Free host ports: `8081` (browser-tor), `8082` (browser-clear), `8083` (browser-i2p), `8084` (browser-http), `8085` (browser-camoufox), `8191` (solverr), `8888` (searxng)
-- 💾 About 5 GB of free disk space
+- 💾 About **35 GB of free disk space** during the first install. Breakdown: ~14 GB Docker images (the 9 containers), ~12 GB Docker build cache (reclaimable), ~6.5 GB OpenWebUI if on the same host. After `docker builder prune -f` you free ~12 GB.
 - 🤖 OpenWebUI already running and connected to `ai-net`
 
 ### Folder structure
