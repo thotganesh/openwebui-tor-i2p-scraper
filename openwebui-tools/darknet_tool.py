@@ -53,6 +53,25 @@ class Tools:
             result = await self._post_http({"url": search_url})
         return "[TOR ONION SEARCH | Ahmia] " + self._format(result)
 
+    async def search_onion_tor66(self, query: str) -> str:
+        """
+        Cerca su siti .onion usando Tor66 (directory di link freschi, no JS).
+        Usare come fallback se Ahmia non basta, per trovare servizi appena emersi.
+
+        :param query: Termine di ricerca.
+        """
+        encoded = quote(query)
+        search_url = (
+            "http://tor66sewebgixwhcqfnp5inzp5x5uohhdy3kvtnyfxc2e5mxiuh34iid.onion"
+            f"/search?q={encoded}"
+        )
+        result = await self._post(
+            self.tor_url,
+            {"url": search_url, "js_enabled": False, "block_media": True},
+        )
+        return "[TOR ONION SEARCH | Tor66] " + self._format(result)
+
+
     # ============================================================
     # RICERCA SU I2P
     # ============================================================
