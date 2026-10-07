@@ -53,23 +53,6 @@ class Tools:
             result = await self._post_http({"url": search_url})
         return "[TOR ONION SEARCH | Ahmia] " + self._format(result)
 
-    async def search_onion_excavator(self, query: str) -> str:
-        """
-        Cerca su siti .onion usando Excavator (no JS, indicizza Tor + I2P).
-
-        :param query: Termine di ricerca.
-        """
-        encoded = quote(query)
-        search_url = (
-            "http://excavatorhmccf33hkrallqhaixykvepc7zthh4bfrx46pqtfesd7nyd.onion"
-            f"/?q={encoded}"
-        )
-        result = await self._post(
-            self.tor_url,
-            {"url": search_url, "js_enabled": False, "block_media": True},
-        )
-        return "[TOR ONION SEARCH | Excavator] " + self._format(result)
-
     # ============================================================
     # RICERCA SU I2P
     # ============================================================
