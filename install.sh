@@ -51,6 +51,11 @@ RAW_BASE="https://raw.githubusercontent.com/${GITHUB_REPO}/${GITHUB_BRANCH}"
 # ============================================================
 step "1/9 Prerequisites check"
 
+if ! command -v openssl >/dev/null 2>&1; then
+    err "openssl not found. Install it: apt-get install -y openssl"
+    exit 1
+fi
+
 if ! command -v docker >/dev/null 2>&1; then
     err "Docker not found. Install it first:"
     err "  curl -fsSL https://get.docker.com | sh"
@@ -77,9 +82,7 @@ log "OpenWebUI found: ${OPENWEBUI_CONTAINER}"
 
 AVAIL_GB=$(df -BG "$HOME" | awk 'NR==2 {print $4}' | tr -d 'G')
 if [ "$AVAIL_GB" -lt 5 ]; then
-    warn "Only ${AVAIL_GB}GB free. Recommended: 5GB+. Continue? (y/n)"
-    read -r ans
-    [ "$ans" != "y" ] && exit 1
+    warn "Only ${AVAIL_GB}GB free. Recommended: 5GB+. Continuing anyway..."
 fi
 log "Disk space: ${AVAIL_GB}GB available"
 
@@ -88,17 +91,7 @@ log "Disk space: ${AVAIL_GB}GB available"
 # ============================================================
 step "2/9 Creating directories"
 
-mkdir -p "$STACK_DIR"/{
-    tor-snowflake,
-    browser-tor,
-    browser-clear,
-    browser-camoufox,
-    browser-http,
-    browser-i2p,
-    searxng-config,
-    openwebui-tools,
-    i2p-data
-}
+mkdir -p "$STACK_DIR"/{tor-snowflake,browser-tor,browser-clear,browser-camoufox,browser-http,browser-i2p,searxng-config,openwebui-tools,i2p-data}
 cd "$STACK_DIR"
 chmod -R 777 i2p-data
 log "Created $STACK_DIR with subdirectories"
@@ -166,6 +159,12 @@ else
     TOR_HASH=$(docker run --rm debian:bookworm-slim bash -c \
         "apt-get update -qq && apt-get install -y -qq tor >/dev/null 2>&1 && tor --hash-password '$TOR_PASSWORD'" \
         | tail -1)
+
+    if [ -z "$TOR_HASH" ] || [[ ! "$TOR_HASH" =~ ^16: ]]; then
+        err "Failed to compute Tor ControlPort hash. Check Docker/network."
+        exit 1
+    fi
+    log "Tor hash computed: ${TOR_HASH:0:20}..."
 
     cat > .env << EOF
 TOR_CONTROL_PASSWORD=$TOR_PASSWORD
