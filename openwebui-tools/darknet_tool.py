@@ -37,45 +37,42 @@ class Tools:
     async def search_onion(self, query: str) -> str:
         """
         Cerca su siti .onion usando Ahmia (clearnet) con gestione del token rotante.
-
-        Ahmia richiede un token hidden dalla home page (formato: name="xxxxxx" value="yyyyyy").
-        Il token cambia ogni ~60 minuti. Lo recuperiamo ad ogni ricerca.
+        Usa un User-Agent browser reale per evitare il blocco di Ahmia.
         """
         import re
         from urllib.parse import urlencode
 
         encoded = quote(query)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Connection": "keep-alive",
+        }
+
         try:
-            async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
-                # 1. Recupera la home page per il token
+            async with httpx.AsyncClient(timeout=30, follow_redirects=True, headers=headers) as client:
                 home = await client.get("https://ahmia.fi/")
                 home_html = home.text
 
-                # 2. Estrai il token (input hidden con name/value esadecimali a 6 cifre)
                 token_name_match = re.search(r'<input[^>]*type="hidden"[^>]*name="([0-9a-f]+)"', home_html)
                 token_value_match = re.search(r'<input[^>]*type="hidden"[^>]*value="([0-9a-f]+)"', home_html)
-
                 token_name = token_name_match.group(1) if token_name_match else None
                 token_value = token_value_match.group(1) if token_value_match else None
 
-                # 3. Costruisci URL con token
-                search_url = f"https://ahmia.fi/search/?q={encoded}"
-                if token_name and token_value:
-                    search_url += "&" + urlencode({token_name: token_value})
+                if not token_name or not token_value:
+                    return "[TOR ONION SEARCH | Ahmia] Token non trovato. Riprova con search_onion_tor66."
 
-                # 4. Esegui la ricerca
+                search_url = f"https://ahmia.fi/search/?q={encoded}&" + urlencode({token_name: token_value})
                 r = await client.get(
                     search_url,
                     headers={"Referer": "https://ahmia.fi/"},
                 )
 
                 html = r.text
-
-                # 5. Estrai link .onion dai risultati
                 onion_urls = re.findall(r'redirect_url=(http://[a-z0-9]+\.onion[^"&\s]*)', html)
 
                 if onion_urls:
-                    # Deduplica mantenendo ordine
                     seen = set()
                     unique = []
                     for u in onion_urls:
@@ -86,14 +83,13 @@ class Tools:
                     out = [f"**Risultati Ahmia per:** {query} ({len(unique)} trovati)\n"]
                     for i, u in enumerate(unique[:15], 1):
                         out.append(f"{i}. {u}")
-                    out.append("\n**Nota:** questi sono link .onion indicizzati. Per leggerli usa read_tor.")
+                    out.append("\n**Nota:** per leggere usa read_tor.")
                     return "[TOR ONION SEARCH | Ahmia] " + "\n".join(out)
 
-                # Fallback: nessun risultato
                 if "No results" in html or "did not match" in html:
                     return f"[TOR ONION SEARCH | Ahmia] Nessun risultato per: {query}"
 
-                return f"[TOR ONION SEARCH | Ahmia] Nessun risultato estratto (len HTML: {len(html)}). Prova search_onion_tor66."
+                return f"[TOR ONION SEARCH | Ahmia] Nessun risultato (HTML len: {len(html)}). Prova search_onion_tor66."
 
         except Exception as e:
             return f"[TOR ONION SEARCH | Ahmia] Errore: {e}"
