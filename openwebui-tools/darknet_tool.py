@@ -42,39 +42,83 @@ class Tools:
     async def search_onion(self, query: str) -> str:
         """
         Cerca specificamente su siti .onion (servizi nascosti Tor) usando Ahmia.
-        Usa questo per trovare hidden services .onion.
+        Usa l'accesso clearnet di Ahmia (piu' affidabile dell'accesso .onion
+        che richiede un token di sessione che cambia).
+
+        :param query: Termine di ricerca.
+        """
+        encoded = quote(query)
+        search_url = f"https://ahmia.fi/search/?q={encoded}"
+        result = await self._post_http({"url": search_url})
+        return "[TOR ONION SEARCH | Ahmia clearnet] " + self._format(result)
+
+    async def search_onion_torch(self, query: str) -> str:
+        """
+        Cerca su siti .onion usando Torch (indice piu' ampio di Ahmia,
+        meno filtrato ma con piu' spam). Fallback se Ahmia non basta.
 
         :param query: Termine di ricerca.
         """
         encoded = quote(query)
         search_url = (
-            "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion"
-            f"/search/?q={encoded}"
+            "http://xmh57jrknzkhv6y3ls3ubitzfqnkrwxhopf5aygthi7d6rplyvk3noyd.onion"
+            f"/cgi-bin/omega/omega?P={encoded}"
         )
         result = await self._post(
             self.tor_url,
             {"url": search_url, "js_enabled": False, "block_media": True},
         )
-        return "[TOR ONION SEARCH | Ahmia] " + self._format(result)
+        return "[TOR ONION SEARCH | Torch] " + self._format(result)
+
 
     # ============================================================
     # RICERCA SU I2P
     # ============================================================
 
+    # RICERCA SU I2P
+    # ============================================================
+
     async def search_i2p(self, query: str) -> str:
         """
-        Cerca su eepsite I2P usando Ahmia (che indicizza anche .i2p).
-        Nota: questa ricerca avviene via clearnet (Ahmia e' un gateway),
-        non via rete I2P. Restituisce link a eepsite .i2p.
+        Cerca su eepsite I2P. Prova Ahmia (gateway clearnet) + Legwork (I2P nativo).
+        Nota: I2P ha pochi motori di ricerca, i risultati possono essere scarsi.
 
         :param query: Termine di ricerca.
         """
         encoded = quote(query)
-        search_url = f"https://ahmia.fi/i2p/search/?q={encoded}"
-        result = await self._post_http({"url": search_url})
-        return "[I2P SEARCH | Ahmia Gateway] " + self._format(result)
+        results = []
+
+        # 1. Ahmia I2P gateway (clearnet)
+        try:
+            ahmia_url = f"https://ahmia.fi/i2p/search/?q={encoded}"
+            r1 = await self._post_http({"url": ahmia_url})
+            if r1 and not r1.get("error") and len(r1.get("text", "")) > 200:
+                results.append("--- Ahmia I2P ---\n" + self._format(r1))
+        except Exception:
+            pass
+
+        # 2. Legwork (I2P nativo via browser-i2p)
+        try:
+            legwork_url = f"http://legwork.i2p/search/?q={encoded}"
+            r2 = await self._post(
+                self.i2p_url,
+                {"url": legwork_url, "js_enabled": False, "block_media": True},
+            )
+            if r2 and not r2.get("error") and len(r2.get("text", "")) > 200:
+                results.append("--- Legwork I2P ---\n" + self._format(r2))
+        except Exception:
+            pass
+
+        if not results:
+            return "[I2P SEARCH] Nessun risultato (motori I2P spesso offline, riprova)"
+
+        return "[I2P SEARCH | " + str(len(results)) + " motori]\n\n" + "\n\n".join(results)
+
 
     # ============================================================
+    # LETTURA PAGINE
+    # ============================================================
+
     # LETTURA PAGINE
     # ============================================================
 

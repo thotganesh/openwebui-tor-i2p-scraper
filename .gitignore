@@ -44,3 +44,6 @@ Thumbs.db
 *.before.*
 *.bak
 *.backup
+
+# I2P profile (huge, downloaded separately)
+browser-i2p/profile/

@@ -18,14 +18,29 @@ class BrowseRequest(BaseModel):
 I2P_PROXY = {"server": "http://i2p-proxy:4444"}
 
 FIREFOX_PREFS = {
+    # Privacy & anti-fingerprinting (eyedeekay profile)
+    "privacy.resistFingerprinting": True,
+    "privacy.resistFingerprinting.letterboxing": True,
+    "privacy.spoof_english": 2,
+    # Network isolation
     "media.peerconnection.enabled": False,
     "network.dns.disablePrefetch": True,
     "network.prefetch-next": False,
+    "network.proxy.socks_remote_dns": True,
+    # Disable sensors & hardware access
     "geo.enabled": False,
-    "privacy.resistFingerprinting": True,
     "webgl.disabled": True,
     "dom.battery.enabled": False,
     "device.sensors.enabled": False,
+    "media.navigator.enabled": False,
+    # Anti-Spectre (from eyedeekay profile)
+    "javascript.options.shared_memory": False,
+    # Additional privacy
+    "browser.cache.disk.enable": False,
+    "browser.cache.memory.enable": False,
+    "network.http.sendRefererHeader": 0,
+    "dom.storage.enabled": False,
+    "dom.indexedDB.enabled": False,
 }
 
 
