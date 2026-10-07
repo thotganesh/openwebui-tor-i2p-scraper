@@ -76,6 +76,14 @@ services:
       - SEARXNG_BASE_URL=http://searxng:8080/
     restart: unless-stopped
 
+  browser-camoufox:
+    build: ./browser-camoufox
+    container_name: browser-camoufox
+    networks: [ai-net]
+    ports:
+      - "127.0.0.1:8085:8085"
+    restart: unless-stopped
+
 networks:
   ai-net:
     external: true

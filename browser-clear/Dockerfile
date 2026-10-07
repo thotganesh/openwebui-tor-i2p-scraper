@@ -2,7 +2,7 @@ FROM mcr.microsoft.com/playwright/python:v1.48.0-jammy
 
 WORKDIR /app
 RUN apt-get update && apt-get install -y libxml2-dev libxslt1-dev python3-dev && rm -rf /var/lib/apt/lists/*
-RUN pip install fastapi uvicorn playwright-stealth httpx playwright==1.48.0 readability-lxml html2text lxml
+RUN pip install fastapi uvicorn  httpx patchright==1.48.0.post0 readability-lxml html2text lxml
 COPY app.py /app/app.py
 
 EXPOSE 8080

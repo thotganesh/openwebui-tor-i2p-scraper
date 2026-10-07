@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from playwright.async_api import async_playwright
-from playwright_stealth import Stealth
+from patchright.async_api import async_playwright
+
 from readability import Document
 import html2text
 import httpx
@@ -187,7 +187,7 @@ def pulisci_testo(html_content: str) -> str:
 # ============================================================
 @app.post("/browse")
 async def browse(req: BrowseRequest):
-    async with Stealth().use_async(async_playwright()) as p:
+    async with async_playwright() as p:
         browser = await p.chromium.launch(
             headless=True,
             args=[
