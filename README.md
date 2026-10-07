@@ -23,6 +23,22 @@ Built specifically as tools for **Open WebUI**.
 
 ---
 
+## ⚡ Quick Overview
+
+**What it does**: gives your local LLM on Open WebUI the ability to read the web — including Tor (`.onion`) and I2P (`.i2p`) — through a 3-tier stealth fallback that bypasses cookie walls and anti-bot systems.
+
+**Install in one command** (requires OpenWebUI already running):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/thotganesh/openwebui-tor-i2p-scraper/main/install.sh -o install.sh && bash install.sh
+```
+
+**What you get**: 9 Docker containers (HTTP reader, Patchright Chromium, Camoufox Firefox, Tor+Snowflake, I2P+i2pd, Solverr, SearXNG) and 2 Open WebUI tools (`Web` and `Darknet`).
+
+**Read more**: scroll down for architecture, the full tutorial, the test battery, and troubleshooting. This README is long because the stack is complex — the [Table of Contents](#-table-of-contents) helps you navigate.
+
+---
+
 ## 📑 Table of Contents
 
 - [🆕 What's new in v3.1](#-whats-new-in-v31)
