@@ -55,10 +55,23 @@ class Tools:
                 home = await client.get("https://ahmia.fi/")
                 home_html = home.text
 
-                token_name_match = re.search(r'<input[^>]*type="hidden"[^>]*name="([0-9a-f]+)"', home_html)
-                token_value_match = re.search(r'<input[^>]*type="hidden"[^>]*value="([0-9a-f]+)"', home_html)
-                token_name = token_name_match.group(1) if token_name_match else None
-                token_value = token_value_match.group(1) if token_value_match else None
+                # Estrazione atomica: name e value dallo stesso tag <input>
+                m = re.search(
+                    r'<input[^>]*type="hidden"[^>]*name="([0-9a-f]+)"[^>]*value="([0-9a-f]+)"',
+                    home_html,
+                )
+                if m:
+                    token_name, token_value = m.group(1), m.group(2)
+                else:
+                    # Fallback: ordine attributi invertito
+                    m2 = re.search(
+                        r'<input[^>]*type="hidden"[^>]*value="([0-9a-f]+)"[^>]*name="([0-9a-f]+)"',
+                        home_html,
+                    )
+                    if m2:
+                        token_value, token_name = m2.group(1), m2.group(2)
+                    else:
+                        token_name, token_value = None, None
 
                 if not token_name or not token_value:
                     return "[TOR ONION SEARCH | Ahmia] Token non trovato. Riprova con search_onion_tor66."

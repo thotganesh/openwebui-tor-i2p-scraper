@@ -72,14 +72,20 @@ class Tools:
         :param url: URL completo da visitare.
         """
         # Tentativo 1: browser-clear (Patchright)
-        result = await self._post(self.clear_url, {"url": url})
-        text = result.get("text", "")
-        if text and len(text) > 5000:
-            return self._format(result)
+        result_clear = await self._post(self.clear_url, {"url": url})
+        text_clear = result_clear.get("text", "")
+
+        if text_clear and len(text_clear) > 5000:
+            return self._format(result_clear)
 
         # Tentativo 2: browser-camoufox (Firefox stealth)
-        result = await self._post(self.camoufox_url, {"url": url})
-        return self._format(result)
+        result_camoufox = await self._post(self.camoufox_url, {"url": url})
+        text_camoufox = result_camoufox.get("text", "")
+
+        # Restituisci il risultato MIGLIORE
+        if len(text_camoufox) > len(text_clear):
+            return self._format(result_camoufox)
+        return self._format(result_clear)
 
     async def _post(self, base_url: str, payload: dict) -> dict:
         try:
