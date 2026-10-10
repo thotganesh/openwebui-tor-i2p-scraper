@@ -11,6 +11,40 @@ import httpx
 from urllib.parse import quote, urlencode
 
 
+import ipaddress as _ipaddress
+from urllib.parse import urlparse as _urlparse
+import re as _re
+
+_NUMERIC_HOST = _re.compile(r"(0x[0-9a-f]+|\d+)(\.(0x[0-9a-f]+|\d+))*")
+
+
+def _validate_url(url: str) -> str | None:
+    """Return None if ok, otherwise an error message."""
+    if not url:
+        return "URL mancante"
+    try:
+        u = _urlparse(url)
+        host = (u.hostname or "").lower()
+    except ValueError:
+        return "URL non valido"
+    if u.scheme not in ("http", "https"):
+        return "schema non consentito (solo http/https)"
+    if not host:
+        return "host mancante"
+    if host == "localhost" or host.endswith((".local", ".internal", ".localhost")):
+        return "host non consentito (rete locale)"
+    try:
+        ip = _ipaddress.ip_address(host)
+        if not ip.is_global:
+            return "IP non pubblico"
+    except ValueError:
+        if _NUMERIC_HOST.fullmatch(host):
+            return "host numerico ambiguo"
+        if "." not in host:
+            return "host senza dominio (rete interna?)"
+    return None
+
+
 class Tools:
     def __init__(self):
         self.tor_url = "http://browser-tor:8081"
@@ -140,6 +174,9 @@ class Tools:
 
     async def read_tor(self, url: str, js_enabled: bool = False) -> str:
         """Legge una pagina tramite rete Tor."""
+        err = _validate_url(url)
+        if err:
+            return f"[TOR] Errore: {err}"
         result = await self._post(
             self.tor_url,
             {"url": url, "js_enabled": js_enabled, "block_media": True},
@@ -149,6 +186,9 @@ class Tools:
 
     async def read_i2p(self, url: str, js_enabled: bool = False) -> str:
         """Legge un eepsite I2P (.i2p)."""
+        err = _validate_url(url)
+        if err:
+            return f"[I2P] Errore: {err}"
         result = await self._post(
             self.i2p_url,
             {"url": url, "js_enabled": js_enabled, "block_media": True},

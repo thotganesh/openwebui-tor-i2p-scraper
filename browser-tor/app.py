@@ -1,7 +1,6 @@
-import os
-import asyncio
-import socket
-from fastapi import FastAPI
+import os, re, time, asyncio, socket, ipaddress
+from urllib.parse import urlparse
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from playwright.async_api import async_playwright
 from stem import Signal
@@ -36,6 +35,7 @@ FIREFOX_PREFS = {
     "dom.battery.enabled": False,
     "device.sensors.enabled": False,
     "media.navigator.enabled": False,
+    "network.proxy.socks_remote_dns": True,
 }
 
 
@@ -77,15 +77,47 @@ async () => {
 """
 
 
-def request_new_circuit():
+NUMERIC_HOST = re.compile(r"(0x[0-9a-f]+|\d+)(\.(0x[0-9a-f]+|\d+))*")
+
+
+def validate_url(url: str) -> None:
+    u = urlparse(url)
+    if u.scheme not in ("http", "https"):
+        raise ValueError("schema non consentito")
+    host = (u.hostname or "").lower()
+    if not host or host == "localhost" or host.endswith((".local", ".internal", ".localhost")):
+        raise ValueError("host non consentito")
     try:
-        tor_proxy_ip = socket.gethostbyname("tor-proxy")
-        with Controller.from_port(address=tor_proxy_ip, port=9151) as controller:
-            controller.authenticate(password=CONTROL_PASSWORD)
-            controller.signal(Signal.NEWNYM)
-            print(f"[info] New circuit requested via {tor_proxy_ip}")
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        ip = None
+    if ip is not None:
+        if not ip.is_global:
+            raise ValueError("IP non pubblico")
+    elif NUMERIC_HOST.fullmatch(host):
+        raise ValueError("host numerico ambiguo")
+    elif "." not in host:
+        raise ValueError("host senza dominio (rete interna?)")
+
+
+def _newnym_sync() -> None:
+    ip = socket.gethostbyname("tor-proxy")
+    with Controller.from_port(address=ip, port=9151) as c:
+        c.authenticate(password=CONTROL_PASSWORD)
+        wait = c.get_newnym_wait()
+        if wait > 0:
+            time.sleep(min(wait, 12))
+        c.signal(Signal.NEWNYM)
+
+
+async def renew_circuit() -> bool:
+    try:
+        await asyncio.to_thread(_newnym_sync)
+        await asyncio.sleep(1)
+        return True
     except Exception as e:
-        print(f"[warn] Could not request new circuit: {e}")
+        print(f"[warn] NEWNYM failed: {e}")
+        return False
 
 
 def pulisci_testo(html_content: str) -> str:
@@ -110,54 +142,46 @@ def pulisci_testo(html_content: str) -> str:
 
 @app.post("/browse")
 async def browse(req: BrowseRequest):
-    request_new_circuit()
-    await asyncio.sleep(1)
+    try:
+        validate_url(req.url)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    renewed = await renew_circuit()
+    if not renewed and os.environ.get("TOR_REQUIRE_NEWNYM") == "1":
+        return {"error": "circuit renewal failed", "circuit_renewed": False,
+                "title": "", "final_url": req.url, "text": ""}
 
     async with async_playwright() as p:
         browser = await p.firefox.launch(
-            headless=True,
-            proxy=TOR_PROXY,
-            firefox_user_prefs=FIREFOX_PREFS,
-        )
-        context = await browser.new_context(
-            viewport={"width": 1000, "height": 900},
-            timezone_id="UTC",
-            locale="en-US",
-            java_script_enabled=req.js_enabled,
-        )
-        page = await context.new_page()
-
-        if req.block_media:
-            await page.route(
-                "**/*.{png,jpg,jpeg,gif,svg,woff,woff2,mp4,webm}",
-                lambda route: route.abort(),
-            )
-
-        # Navigation with error handling (fix: .onion unreachable no longer 500)
+            headless=True, proxy=TOR_PROXY, firefox_user_prefs=FIREFOX_PREFS)
         try:
-            await page.goto(req.url, wait_until="domcontentloaded", timeout=60000)
-            await page.wait_for_timeout(2500)
-        except Exception as e:
-            await browser.close()
-            return {
-                "error": f"Navigation failed: {e}",
-                "title": "",
-                "final_url": req.url,
-                "text": "",
-            }
-
-        if req.js_enabled:
+            context = await browser.new_context(
+                viewport={"width": 1000, "height": 900},
+                timezone_id="UTC", locale="en-US",
+                java_script_enabled=req.js_enabled)
+            page = await context.new_page()
+            if req.block_media:
+                await page.route("**/*.{png,jpg,jpeg,gif,svg,woff,woff2,mp4,webm}",
+                                 lambda route: route.abort())
             try:
-                await page.evaluate(COOKIE_KILLER_JS)
+                await page.goto(req.url, wait_until="domcontentloaded", timeout=45000)
+                await page.wait_for_timeout(2500)
             except Exception as e:
-                print(f"[warn] Cookie killer failed: {e}")
-
-        result = {"title": await page.title(), "final_url": page.url}
-        if req.extract_text:
-            result["text"] = pulisci_testo(await page.content())
-
-        await browser.close()
-        return result
+                return {"error": f"Navigation failed: {e}", "circuit_renewed": renewed,
+                        "title": "", "final_url": req.url, "text": ""}
+            if req.js_enabled:
+                try:
+                    await page.evaluate(COOKIE_KILLER_JS)
+                except Exception as e:
+                    print(f"[warn] Cookie killer failed: {e}")
+            result = {"title": await page.title(), "final_url": page.url,
+                      "circuit_renewed": renewed}
+            if req.extract_text:
+                result["text"] = pulisci_testo(await page.content())
+            return result
+        finally:
+            await browser.close()
 
 
 @app.get("/health")

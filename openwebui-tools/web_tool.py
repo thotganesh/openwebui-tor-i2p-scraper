@@ -9,6 +9,40 @@ required_open_webui_version: 0.3.0
 import httpx
 
 
+import ipaddress as _ipaddress
+from urllib.parse import urlparse as _urlparse
+import re as _re
+
+_NUMERIC_HOST = _re.compile(r"(0x[0-9a-f]+|\d+)(\.(0x[0-9a-f]+|\d+))*")
+
+
+def _validate_url(url: str) -> str | None:
+    """Return None if ok, otherwise an error message."""
+    if not url:
+        return "URL mancante"
+    try:
+        u = _urlparse(url)
+        host = (u.hostname or "").lower()
+    except ValueError:
+        return "URL non valido"
+    if u.scheme not in ("http", "https"):
+        return "schema non consentito (solo http/https)"
+    if not host:
+        return "host mancante"
+    if host == "localhost" or host.endswith((".local", ".internal", ".localhost")):
+        return "host non consentito (rete locale)"
+    try:
+        ip = _ipaddress.ip_address(host)
+        if not ip.is_global:
+            return "IP non pubblico"
+    except ValueError:
+        if _NUMERIC_HOST.fullmatch(host):
+            return "host numerico ambiguo"
+        if "." not in host:
+            return "host senza dominio (rete interna?)"
+    return None
+
+
 class Tools:
     def __init__(self):
         self.searxng_url = "http://searxng:8080"
@@ -54,6 +88,9 @@ class Tools:
 
         :param url: URL completo da visitare.
         """
+        err = _validate_url(url)
+        if err:
+            return f"Errore: {err}"
         result = await self._post(self.http_url, {"url": url})
         if not result or result.get("error"):
             return await self.read_web_full(url)
