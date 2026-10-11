@@ -47,3 +47,5 @@ Thumbs.db
 
 # I2P profile (huge, downloaded separately)
 browser-i2p/profile/
+.env.openwebui
+backups/

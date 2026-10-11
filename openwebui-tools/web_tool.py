@@ -2,7 +2,7 @@
 title: Web (Search + Reader)
 description: Cerca su internet (SearXNG) e legge qualsiasi pagina web normale. Sceglie automaticamente il metodo piu' veloce.
 author: NeoPC
-version: 1.1.0
+version: 1.2.0
 required_open_webui_version: 0.3.0
 """
 

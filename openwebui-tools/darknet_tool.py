@@ -2,7 +2,7 @@
 title: Darknet (Tor + I2P)
 description: Cerca e legge su Tor (.onion) e I2P (.i2p). Include ricerca web anonima via DuckDuckGo, Ahmia e Tor66.
 author: NeoPC
-version: 3.1.0
+version: 3.2.0
 required_open_webui_version: 0.3.0
 """
 
