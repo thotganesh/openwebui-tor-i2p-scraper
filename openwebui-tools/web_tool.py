@@ -2,7 +2,7 @@
 title: Web (Search + Reader)
 description: Cerca su internet (SearXNG) e legge qualsiasi pagina web normale. Sceglie automaticamente il metodo piu' veloce.
 author: NeoPC
-version: 1.3.0
+version: 1.3.1
 required_open_webui_version: 0.3.0
 """
 
@@ -22,7 +22,7 @@ def _validate_url(url: str) -> str | None:
         return "URL mancante"
     try:
         u = _urlparse(url)
-        host = (u.hostname or "").lower()
+        host = (u.hostname or "").lower().rstrip(".")
     except ValueError:
         return "URL non valido"
     if u.scheme not in ("http", "https"):
@@ -108,6 +108,9 @@ class Tools:
 
         :param url: URL completo da visitare.
         """
+        err = _validate_url(url)
+        if err:
+            return f"Errore: {err}"
         # Tentativo 1: browser-clear (Patchright)
         result_clear = await self._post(self.clear_url, {"url": url})
         text_clear = result_clear.get("text", "")

@@ -2,7 +2,7 @@
 title: Darknet (Tor + I2P)
 description: Cerca e legge su Tor (.onion) e I2P (.i2p). Include ricerca web anonima via DuckDuckGo, Ahmia e Tor66.
 author: NeoPC
-version: 3.3.0
+version: 3.3.1
 required_open_webui_version: 0.3.0
 """
 
@@ -24,7 +24,7 @@ def _validate_url(url: str) -> str | None:
         return "URL mancante"
     try:
         u = _urlparse(url)
-        host = (u.hostname or "").lower()
+        host = (u.hostname or "").lower().rstrip(".")
     except ValueError:
         return "URL non valido"
     if u.scheme not in ("http", "https"):
