@@ -245,7 +245,7 @@ docker compose ps
 step "9/9 Health checks"
 
 info "Waiting for Tor to bootstrap (up to 120s)..."
-for i in $(seq 1 60); do
+for _ in $(seq 1 60); do
     if docker compose logs tor-proxy 2>&1 | grep -q "Bootstrapped 100%"; then
         log "Tor bootstrapped 100%"
         break
