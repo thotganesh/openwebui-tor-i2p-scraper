@@ -188,52 +188,59 @@ def pulisci_testo(html_content: str) -> str:
 @app.post("/browse")
 async def browse(req: BrowseRequest):
     async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            headless=True,
-            args=[
-                "--disable-blink-features=AutomationControlled",
-                "--no-sandbox",
-                "--disable-dev-shm-usage",
-            ],
-        )
-        context = await browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
-            viewport={"width": 1366, "height": 768},
-            locale="it-IT",
-        )
-        page = await context.new_page()
-
-        if req.block_media:
-            await page.route(
-                "**/*.{png,jpg,jpeg,gif,svg,woff,woff2,mp4,webm}",
-                lambda route: route.abort(),
-            )
-
-        html = ""
-        title = ""
+        browser = None
         try:
-            await page.goto(req.url, wait_until="domcontentloaded", timeout=60000)
-            await page.wait_for_timeout(2500)
+            browser = await p.chromium.launch(
+                headless=True,
+                args=[
+                    "--disable-blink-features=AutomationControlled",
+                    "--no-sandbox",
+                    "--disable-dev-shm-usage",
+                ],
+            )
+            context = await browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+                viewport={"width": 1366, "height": 768},
+                locale="it-IT",
+            )
+            page = await context.new_page()
 
-            # Cookie killer (1a passata)
-            await page.evaluate(COOKIE_KILLER_JS)
+            if req.block_media:
+                await page.route(
+                    "**/*",
+                    lambda route: route.abort()
+                    if route.request.resource_type in {"image", "media", "font"}
+                    else route.continue_(),
+                )
 
-            # Seconda passata dopo un breve delay (alcuni CMP riappaiono)
-            await page.wait_for_timeout(1000)
-            await page.evaluate(COOKIE_KILLER_JS)
+            html = ""
+            title = ""
+            try:
+                await page.goto(req.url, wait_until="domcontentloaded", timeout=60000)
+                await page.wait_for_timeout(2500)
 
-            html = await page.content()
-            title = await page.title()
-        except Exception as e:
-            await browser.close()
-            return {
-                "title": "",
-                "final_url": req.url,
-                "text": "",
-                "error": f"Errore Playwright: {e}",
-            }
+                # Cookie killer (1a passata)
+                await page.evaluate(COOKIE_KILLER_JS)
 
-        await browser.close()
+                # Seconda passata dopo un breve delay (alcuni CMP riappaiono)
+                await page.wait_for_timeout(1000)
+                await page.evaluate(COOKIE_KILLER_JS)
+
+                html = await page.content()
+                title = await page.title()
+            except Exception as e:
+                return {
+                    "title": "",
+                    "final_url": req.url,
+                    "text": "",
+                    "error": f"Errore Playwright: {e}",
+                }
+        finally:
+            if browser is not None:
+                try:
+                    await browser.close()
+                except Exception:
+                    pass
 
         # Fallback Solverr se challenge rilevata
         if is_challenge_page(html, title):

@@ -105,49 +105,57 @@ def pulisci_testo(html_content: str) -> str:
 @app.post("/browse")
 async def browse(req: BrowseRequest):
     async with async_playwright() as p:
-        browser = await p.firefox.launch(
-            headless=True,
-            proxy=I2P_PROXY,
-            firefox_user_prefs=FIREFOX_PREFS,
-        )
-        context = await browser.new_context(
-            viewport={"width": 1000, "height": 900},
-            timezone_id="UTC",
-            locale="en-US",
-            java_script_enabled=req.js_enabled,
-        )
-        page = await context.new_page()
-
-        if req.block_media:
-            await page.route(
-                "**/*.{png,jpg,jpeg,gif,svg,woff,woff2,mp4,webm}",
-                lambda route: route.abort(),
-            )
-
-        # AIRBAG: catch navigation errors
+        browser = None
         try:
-            await page.goto(req.url, wait_until="domcontentloaded", timeout=120000)
-            await page.wait_for_timeout(2500)
-        except Exception as e:
-            await browser.close()
-            return {
-                "title": "I2P Network Error",
-                "final_url": req.url,
-                "text": f"I2P site currently unreachable or router not yet synced. Detail: {e}",
-            }
+            browser = await p.firefox.launch(
+                headless=True,
+                proxy=I2P_PROXY,
+                firefox_user_prefs=FIREFOX_PREFS,
+            )
+            context = await browser.new_context(
+                viewport={"width": 1000, "height": 900},
+                timezone_id="UTC",
+                locale="en-US",
+                java_script_enabled=req.js_enabled,
+            )
+            page = await context.new_page()
 
-        if req.js_enabled:
+            if req.block_media:
+                await page.route(
+                    "**/*",
+                    lambda route: route.abort()
+                    if route.request.resource_type in {"image", "media", "font"}
+                    else route.continue_(),
+                )
+
+            # AIRBAG: catch navigation errors
             try:
-                await page.evaluate(COOKIE_KILLER_JS)
+                await page.goto(req.url, wait_until="domcontentloaded", timeout=120000)
+                await page.wait_for_timeout(2500)
             except Exception as e:
-                print(f"[warn] Cookie killer failed: {e}")
+                return {
+                    "title": "I2P Network Error",
+                    "final_url": req.url,
+                    "text": f"I2P site currently unreachable or router not yet synced. Detail: {e}",
+                }
 
-        result = {"title": await page.title(), "final_url": page.url}
-        if req.extract_text:
-            result["text"] = pulisci_testo(await page.content())
+            if req.js_enabled:
+                try:
+                    await page.evaluate(COOKIE_KILLER_JS)
+                except Exception as e:
+                    print(f"[warn] Cookie killer failed: {e}")
 
-        await browser.close()
-        return result
+            result = {"title": await page.title(), "final_url": page.url}
+            if req.extract_text:
+                result["text"] = pulisci_testo(await page.content())
+
+            return result
+        finally:
+            if browser is not None:
+                try:
+                    await browser.close()
+                except Exception:
+                    pass
 
 
 @app.get("/health")

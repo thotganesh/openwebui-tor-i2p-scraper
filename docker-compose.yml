@@ -19,6 +19,13 @@ services:
     depends_on: [tor-proxy]
     ports:
       - "127.0.0.1:8081:8081"
+    shm_size: 1gb
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8081/health',timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     restart: unless-stopped
 
   browser-clear:
@@ -27,6 +34,13 @@ services:
     networks: [ai-net]
     ports:
       - "127.0.0.1:8082:8080"
+    shm_size: 1gb
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8080/health',timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     restart: unless-stopped
 
   i2p-proxy:
@@ -45,6 +59,13 @@ services:
     depends_on: [i2p-proxy]
     ports:
       - "127.0.0.1:8083:8083"
+    shm_size: 1gb
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8083/health',timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     restart: unless-stopped
  
   browser-http:
@@ -53,6 +74,13 @@ services:
     networks: [ai-net]
     ports:
       - "127.0.0.1:8084:8084"
+    shm_size: 1gb
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8084/health',timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     restart: unless-stopped
 
   solverr:
@@ -82,6 +110,13 @@ services:
     networks: [ai-net]
     ports:
       - "127.0.0.1:8085:8085"
+    shm_size: 1gb
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8085/health',timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     restart: unless-stopped
 
 networks:
