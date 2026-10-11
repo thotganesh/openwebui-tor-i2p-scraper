@@ -12,7 +12,7 @@ class BrowseRequest(BaseModel):
     url: str
     extract_text: bool = True
     block_media: bool = True
-    js_enabled: bool = True
+    js_enabled: bool = False
 
 
 I2P_PROXY = {"server": "http://i2p-proxy:4444"}

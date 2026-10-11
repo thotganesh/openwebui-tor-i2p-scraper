@@ -1,4 +1,7 @@
 SocksPort 0.0.0.0:9150
+ControlPort 0.0.0.0:9151
+# HashedControlPassword is now injected via docker-compose and .env
+
 UseBridges 1
 
 ClientTransportPlugin snowflake exec /usr/local/bin/snowflake-client \
@@ -6,7 +9,19 @@ ClientTransportPlugin snowflake exec /usr/local/bin/snowflake-client \
   -front cdn.sstatic.net \
   -ice stun:stun.l.google.com:19302,stun:stun.antisip.com:3478,stun:stun.bluesip.net:3478,stun:stun.dus.net:3478,stun:stun.epygi.com:3478,stun:stun.sonetel.com:3478,stun:stun.uls.co.za:3478,stun:stun.voipgate.com:3478,stun:stun.voys.nl:3478
 
-Bridge snowflake 192.0.2.3:80 2B280B23E1107BB62ABFC40DDCC8824814F80A72 fingerprint=2B280B23E1107BB62ABFC40DDCC8824814F80A72 url=https://snowflake-broker.torproject.net.global.prod.fastly.net/ fronts=foursquare.com,github.githubassets.com ice=stun:stun.l.google.com:19302,stun:stun.antisip.com:3478,stun:stun.bluesip.net:3478,stun:stun.dus.net:3478,stun:stun.epygi.com:3478,stun:stun.sonetel.com:3478,stun:stun.uls.co.za:3478,stun:stun.voipgate.com:3478,stun:stun.voys.nl:3478 utls-imitate=hellorandomizedalpn
+Bridge snowflake 192.0.2.3:80 2B280B23E1107BB62ABFC40DDCC8824814F80A72 url=https://snowflake-broker.torproject.net.global.prod.fastly.net/ fronts=foursquare.com,github.githubassets.com ice=stun:stun.l.google.com:19302,stun:stun.antisip.com:3478,stun:stun.bluesip.net:3478,stun:stun.dus.net:3478 utls-imitate=hellorandomizedalpn
 
-ControlPort 0.0.0.0:9151
-# HashedControlPassword is now injected via docker-compose and .env
+Bridge snowflake 192.0.2.4:80 2B280B23E1107BB62ABFC40DDCC8824814F80A72 url=https://snowflake-broker.torproject.net.global.prod.fastly.net/ fronts=github.githubassets.com,cdn.sstatic.net ice=stun:stun.l.google.com:19302,stun:stun.antisip.com:3478,stun:stun.bluesip.net:3478,stun:stun.dus.net:3478 utls-imitate=hellorandomizedalpn
+
+Bridge snowflake 192.0.2.5:80 2B280B23E1107BB62ABFC40DDCC8824814F80A72 url=https://snowflake-broker.torproject.net.global.prod.fastly.net/ fronts=cdn.sstatic.net,foursquare.com ice=stun:stun.l.google.com:19302,stun:stun.antisip.com:3478,stun:stun.bluesip.net:3478,stun:stun.dus.net:3478 utls-imitate=hellorandomizedalpn
+
+CircuitBuildTimeout 90
+LearnCircuitBuildTimeout 0
+CircuitsAvailableTimeout 3600
+ClientBootstrapConsensusAuthorityDownloadInitialDelay 0
+ClientBootstrapConsensusAuthorityDownloadSchedule 10, 20, 40, 80, 160, 320
+ClientBootstrapConsensusMaxDownloadTries 20
+ClientBootstrapConsensusMaxInProgressTries 6
+ConnectionPadding 1
+ReducedConnectionPadding 0
+DNSPort 0
