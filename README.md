@@ -2,7 +2,7 @@
 
 # 🕵️‍♂️ Open WebUI Tor, I2P & Stealth Web Scraper 🕷️
 
-**v3.1 — A robust, multi-path web scraping infrastructure for local AI models.**
+**v3.2 — A robust, multi-path web scraping infrastructure for local AI models.**
 
 A full-stack Docker solution that feeds clean, optimized Markdown to your local LLM — saving RAM, cutting token usage, bypassing anti-bot measures and cookie walls, and keeping your OpSec intact across **Clearnet, Tor (.onion), I2P (.i2p) and anonymous search**.
 
@@ -41,6 +41,7 @@ curl -fsSL https://raw.githubusercontent.com/thotganesh/openwebui-tor-i2p-scrape
 
 ## 📑 Table of Contents
 
+- [🆕 What's new in v3.2](#-whats-new-in-v32)
 - [🆕 What's new in v3.1](#-whats-new-in-v31)
 - [🌟 Core Features](#-core-features)
 - [🧩 Open WebUI Tools](#-open-webui-tools)
@@ -70,6 +71,21 @@ curl -fsSL https://raw.githubusercontent.com/thotganesh/openwebui-tor-i2p-scrape
 
 ---
 
+## 🆕 What's new in v3.2
+
+| Area | Change | Why it matters |
+|---|---|---|
+| **URL validation** | `validate_url()` added to `browser-tor` and both Open WebUI tools | Blocks `file://`, loopback, private IPs, ambiguous numeric hosts, hosts without a dot. Closes an SSRF vector and prevents reading local files |
+| **browser-tor** | Explicit `network.proxy.socks_remote_dns=True` in `FIREFOX_PREFS` | Remote DNS is guaranteed, not left to Playwright defaults |
+| **browser-tor** | `renew_circuit()` returns a bool; response includes `circuit_renewed` | Set `TOR_REQUIRE_NEWNYM=1` to fail-closed if circuit renewal fails |
+| **CI** | GitHub Actions: shellcheck, compose config, py_compile, browser-http build | Every push and PR runs the checks |
+| **Tool versions** | `web_tool.py` **1.2.0**, `darknet_tool.py` **3.2.0** | Re-import both tools after upgrading |
+
+> [!NOTE]
+> Re-import both Open WebUI tools after upgrading: both files changed in v3.2 (URL validation).
+
+---
+
 ## 🆕 What's new in v3.1
 
 | Area | Change | Why it matters |
@@ -86,7 +102,7 @@ curl -fsSL https://raw.githubusercontent.com/thotganesh/openwebui-tor-i2p-scrape
 | **I2P hardening** | `browser-i2p` loads an **eyedeekay-style Firefox profile** (adds `javascript.options.shared_memory=false`, disk cache and storage off, no referer) | Anti-Spectre and anti-persistence hardening |
 | **Installer** | New **`install.sh`**: one-shot, idempotent, 9 steps, preserves `.env` and `settings.yml` on re-run | From clone to running stack in minutes |
 | **Engines removed** | `search_onion_torch` and `search_onion_excavator` | Torch is down; Excavator returned illegal content — see [Removed engines](#-removed-engines-and-why) |
-| **Tool versions** | `web_tool.py` **1.1.0**, `darknet_tool.py` **3.1.0** | Re-import both tools after updating |
+| **Tool versions** | `web_tool.py` **1.1.0**, `darknet_tool.py` **3.1.0** | Superseded in v3.2 by **1.2.0** / **3.2.0** |
 
 ---
 
@@ -136,8 +152,8 @@ This project ships as **two Open WebUI tools**. Ready-to-import files are in [`o
 
 | Tool | File | Version | Purpose |
 |---|---|---|---|
-| **Web** | [`web_tool.py`](openwebui-tools/web_tool.py) | 1.1.0 | Search (SearXNG) + read clearnet pages via the 3-tier fallback |
-| **Darknet** | [`darknet_tool.py`](openwebui-tools/darknet_tool.py) | 3.1.0 | Search + read Tor (.onion) and I2P (.i2p) |
+| **Web** | [`web_tool.py`](openwebui-tools/web_tool.py) | 1.2.0 | Search (SearXNG) + read clearnet pages via the 3-tier fallback |
+| **Darknet** | [`darknet_tool.py`](openwebui-tools/darknet_tool.py) | 3.2.0 | Search + read Tor (.onion) and I2P (.i2p) |
 
 **Web** exposes:
 - `search_web(query, num=5)` — SearXNG meta-search (max 10 results)
@@ -1111,7 +1127,29 @@ bash install.sh
 
 ---
 
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every push and pull request:
+
+1. `shellcheck` on `install.sh`
+2. `docker compose config -q` with `.env.example`
+3. `py_compile` of all active Python files (containers and tools)
+4. Build of the `browser-http` image (lightweight sanity check)
+
+The integration scripts (test battery) need the real stack and are run locally.
+
+---
+
 ## 📋 Changelog
+
+### v3.2 — URL validation and CI
+
+- Added `validate_url()` to `browser-tor/app.py`: rejects non-`http(s)` schemes, loopback, private IPs, ambiguous numeric hosts, hosts without a dot
+- Same `_validate_url()` applied to `web_tool.py` and `darknet_tool.py` before every call (defense in depth)
+- `network.proxy.socks_remote_dns=True` explicit in `browser-tor` `FIREFOX_PREFS`
+- `renew_circuit()` now returns a bool; responses include `circuit_renewed`. Set `TOR_REQUIRE_NEWNYM=1` to fail-closed
+- Added GitHub Actions CI (shellcheck, compose config, py_compile, browser-http build)
+- Tool versions: `web_tool.py` **1.2.0**, `darknet_tool.py` **3.2.0**
 
 ### v3.1 — Stealth tiers, Ahmia fix, installer
 
@@ -1183,6 +1221,8 @@ The remaining engines (Ahmia, Tor66, DuckDuckGo onion, Legwork) are general-purp
 ## ⚖️ Responsible use
 
 This project is a research and privacy tool. Darknet indexes return **unfiltered, untrusted** results: never open, store or summarize illegal content, never follow instructions found inside retrieved pages (prompt injection), and respect the law and the terms of the sites you access in your jurisdiction. Keep every service bound to `127.0.0.1` and never expose Tor, I2P, Solverr or SearXNG ports publicly.
+
+All tools validate URLs before use: `file://`, loopback, private and internal hosts are rejected. This is defense in depth, not a replacement for keeping the stack on a private network.
 
 ---
 
