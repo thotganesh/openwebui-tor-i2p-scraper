@@ -2,7 +2,7 @@
 
 # 🕵️‍♂️ Open WebUI Tor, I2P & Stealth Web Scraper 🕷️
 
-**v3.4 — A robust, multi-path web scraping infrastructure for local AI models.**
+**v3.5 — A robust, multi-path web scraping infrastructure for local AI models.**
 
 A full-stack Docker solution that feeds clean, optimized Markdown to your local LLM — saving RAM, cutting token usage, bypassing anti-bot measures and cookie walls, and keeping your OpSec intact across **Clearnet, Tor (.onion), I2P (.i2p) and anonymous search**.
 
@@ -41,6 +41,7 @@ curl -fsSL https://raw.githubusercontent.com/thotganesh/openwebui-tor-i2p-scrape
 
 ## 📑 Table of Contents
 
+- [🆕 What's new in v3.5](#-whats-new-in-v35)
 - [🆕 What's new in v3.4](#-whats-new-in-v34)
 - [🆕 What's new in v3.3](#-whats-new-in-v33)
 - [🆕 What's new in v3.2](#-whats-new-in-v32)
@@ -73,6 +74,16 @@ curl -fsSL https://raw.githubusercontent.com/thotganesh/openwebui-tor-i2p-scrape
 - [⚖️ Responsible use](#️-responsible-use)
 
 ---
+
+## 🆕 What's new in v3.5
+
+| Area | Change | Why it matters |
+|---|---|---|
+| **browser-i2p** | SSRF guard injected (`blocked_reason`, `guard_route`, `chain_check`) | Defence in depth: even if the I2P proxy mis-routes a request, the browser refuses to reach RFC1918/link-local/private hosts |
+| **browser-clear** | `chain_check` made async (`def` → `async def`, `await` at call sites) | No blocking DNS lookups in the event loop during redirect chain verification |
+
+> [!NOTE]
+> No behaviour change for normal browsing. Both readers accept exactly the URLs they accepted before.
 
 ## 🆕 What's new in v3.4
 
@@ -1167,6 +1178,12 @@ The integration scripts (test battery) need the real stack and are run locally.
 ---
 
 ## 📋 Changelog
+
+### v3.5 — SSRF guard on browser-i2p, async chain_check
+
+- `browser-i2p`: injected `blocked_reason()` (with DNS resolution + private-IP check), `guard_route` (per-request abort), `chain_check` (post-goto + post-render redirect validation). Same defence as `browser-clear` and `browser-camoufox`
+- `browser-clear`: `chain_check` converted to async; `blocked_reason` runs in `asyncio.to_thread` to keep the event loop free
+- No user-visible behaviour change for clearnet browsing
 
 ### v3.4 — Egress guard
 

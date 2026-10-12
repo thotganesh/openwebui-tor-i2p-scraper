@@ -75,7 +75,7 @@ async def guard_route(route):
         await route.abort()
     else:
         await route.fallback()
-def chain_check(resp, page):
+async def chain_check(resp, page):
     """Scarta il risultato se un redirect (o l'URL finale) punta a host non pubblici."""
     urls, r = [], (resp.request if resp is not None else None)
     while r is not None:
@@ -83,7 +83,7 @@ def chain_check(resp, page):
         r = r.redirected_from
     urls.append(page.url)
     for u in urls:
-        why = blocked_reason(u)
+        why = await _aio.to_thread(blocked_reason, u)
         if why:
             raise RuntimeError("redirect/URL bloccato (" + why + "): " + u[:120])
 # ===== /SSRF GUARD =====
@@ -307,7 +307,7 @@ async def _browse_impl(req: BrowseRequest):
             title = ""
             try:
                 _nav = await page.goto(req.url, wait_until="domcontentloaded", timeout=60000)
-                chain_check(_nav, page)
+                await chain_check(_nav, page)
                 await page.wait_for_timeout(2500)
 
                 # Cookie killer (1a passata)
@@ -317,7 +317,7 @@ async def _browse_impl(req: BrowseRequest):
                 await page.wait_for_timeout(1000)
                 await page.evaluate(COOKIE_KILLER_JS)
 
-                chain_check(None, page)
+                await chain_check(None, page)
                 html = await page.content()
                 title = await page.title()
             except Exception as e:
