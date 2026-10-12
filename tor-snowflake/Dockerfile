@@ -4,7 +4,11 @@ FROM golang:1.23-bookworm AS builder
 # Permette a Go di scaricare automaticamente la toolchain richiesta dal go.mod
 ENV GOTOOLCHAIN=auto
 
-RUN git clone https://git.torproject.org/pluggable-transports/snowflake.git /tmp/snowflake \
+# Pinned to the latest stable release (tor-browser-build ships tags).
+# Bump the tag deliberately; do not build from HEAD.
+ARG SNOWFLAKE_TAG=v2.9.2
+RUN git clone --branch "${SNOWFLAKE_TAG}" --depth 1 \
+        https://git.torproject.org/pluggable-transports/snowflake.git /tmp/snowflake \
     && cd /tmp/snowflake/client \
     && go build -o /usr/local/bin/snowflake-client .
 

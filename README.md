@@ -2,7 +2,7 @@
 
 # 🕵️‍♂️ Open WebUI Tor, I2P & Stealth Web Scraper 🕷️
 
-**v3.5.3 — A robust, multi-path web scraping infrastructure for local AI models.**
+**v3.5.5 — A robust, multi-path web scraping infrastructure for local AI models.**
 
 A full-stack Docker solution that feeds clean, optimized Markdown to your local LLM — saving RAM, cutting token usage, bypassing anti-bot measures and cookie walls, and keeping your OpSec intact across **Clearnet, Tor (.onion), I2P (.i2p) and anonymous search**.
 
@@ -1181,6 +1181,18 @@ The integration scripts (test battery) need the real stack and are run locally.
 
 ## 📋 Changelog
 
+### v3.5.5 — pin Snowflake client to a stable tag
+
+- `tor-snowflake/Dockerfile` clones tag `v2.9.2` (via `ARG SNOWFLAKE_TAG`) instead of the `main` branch
+- README: new "Snowflake pin" paragraph in the Security hardening section
+
+### v3.5.4 — README i18n cleanup
+
+- Section "Periodic credential rotation" (was Italian)
+- Section "Egress guard (recommended)" (was Italian)
+- Fixed a duplicated line in the Egress guard section
+- TOC entries updated
+
 ### v3.5.3 — more Snowflake bridges, rotation script
 
 - `torrc`: 4 Snowflake bridges (was 2) for better circuit availability
@@ -1368,5 +1380,7 @@ All tools validate URLs before use: `file://`, loopback, private and internal ho
 **Proxy isolation.** `tor-proxy` and `i2p-proxy` live on a dedicated `proxy-net` network. Only `browser-tor`, `browser-i2p` (and the Camofox Tor/I2P instances of hermes-stealth-stack) are attached to both `ai-net` and `proxy-net`. Create it once: `docker network create proxy-net`.
 
 **Tor bridges.** `tor-snowflake/torrc` uses the two official Snowflake bridge lines shipped with Tor Browser (tor-browser-build, April 2026). Several `Bridge` lines with the same fingerprint make Tor treat them as a single bridge. Refresh them from `projects/tor-expert-bundle/pt_config.json` in tor-browser-build when the broker or the STUN list change.
+
+**Snowflake pin.** `tor-snowflake/Dockerfile` builds `snowflake-client` from tag `v2.9.2` (last stable release). Bump `ARG SNOWFLAKE_TAG` deliberately; the image never builds from `HEAD`.
 
 **Known limits.** `browser-clear` runs Chromium with `--no-sandbox` inside the container, which is why the egress guard exists. Redirect chains inside Solverr's own browser are not inspected. A DNS-rebinding window exists between the guard's lookup and the browser's own lookup.
