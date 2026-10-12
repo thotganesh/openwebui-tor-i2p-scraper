@@ -57,3 +57,7 @@ tor-snowflake/torrc.test
 
 # install.sh pre-overwrite backups
 *.pre-install
+*.bak*
+*.pre-fix
+*.new
+torrc.test

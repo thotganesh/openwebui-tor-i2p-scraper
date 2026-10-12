@@ -2,7 +2,7 @@ services:
   tor-proxy:
     build: ./tor-snowflake
     container_name: tor-proxy
-    networks: [ai-net]
+    networks: [proxy-net]
     environment:
       - TOR_CONTROL_HASH=${TOR_CONTROL_HASH:?Set TOR_CONTROL_HASH in .env}
     command: ["sh", "-c", "exec tor -f /etc/tor/torrc --HashedControlPassword \"$$TOR_CONTROL_HASH\""]
@@ -13,7 +13,7 @@ services:
   browser-tor:
     build: ./browser-tor
     container_name: browser-tor
-    networks: [ai-net]
+    networks: [ai-net, proxy-net]
     environment:
       - TOR_CONTROL_PASSWORD=${TOR_CONTROL_PASSWORD:?Set TOR_CONTROL_PASSWORD in .env}
     depends_on: [tor-proxy]
@@ -46,7 +46,7 @@ services:
   i2p-proxy:
     image: purplei2p/i2pd@sha256:7b9a0a9f65fe7b3a280dd4fa7c2a3712d49a972f151defa3a78fbdd2ce40bd2d
     container_name: i2p-proxy
-    networks: [ai-net]
+    networks: [proxy-net]
     command: --httpproxy.address=0.0.0.0 --socksproxy.address=0.0.0.0
     restart: unless-stopped
     volumes:
@@ -55,7 +55,7 @@ services:
   browser-i2p:
     build: ./browser-i2p
     container_name: browser-i2p
-    networks: [ai-net]
+    networks: [ai-net, proxy-net]
     depends_on: [i2p-proxy]
     ports:
       - "127.0.0.1:8083:8083"
@@ -121,4 +121,6 @@ services:
 
 networks:
   ai-net:
+    external: true
+  proxy-net:
     external: true

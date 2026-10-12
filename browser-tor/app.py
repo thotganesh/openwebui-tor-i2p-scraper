@@ -24,6 +24,8 @@ class BrowseRequest(BaseModel):
 
 TOR_PROXY = {"server": "socks5://tor-proxy:9150"}
 CONTROL_PASSWORD = os.environ.get("TOR_CONTROL_PASSWORD")
+if not CONTROL_PASSWORD:
+    raise RuntimeError("TOR_CONTROL_PASSWORD is required. Set it in the environment before starting this container.")
 
 
 FIREFOX_PREFS = {
@@ -175,7 +177,12 @@ async def _browse_impl(req: BrowseRequest):
                                  if route.request.resource_type in {"image", "media", "font"}
                                  else route.continue_())
             try:
-                await page.goto(req.url, wait_until="domcontentloaded", timeout=45000)
+                await page.goto(req.url, wait_until="domcontentloaded", timeout=90000)
+                if req.wait_selector:
+                    try:
+                        await page.wait_for_selector(req.wait_selector, timeout=10000)
+                    except Exception as e:
+                        print(f"[warn] wait_selector '{req.wait_selector}' not found: {e}")
                 await page.wait_for_timeout(2500)
             except Exception as e:
                 return {"error": f"Navigation failed: {e}", "circuit_renewed": renewed,

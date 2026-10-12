@@ -1352,3 +1352,20 @@ All tools validate URLs before use: `file://`, loopback, private and internal ho
 ⭐ If this project helps you, consider leaving a star on the repo!
 
 </div>
+
+
+---
+
+## 🔒 Security hardening
+
+**SSRF guard.** `browser-http`, `browser-clear` and `browser-camoufox` refuse any URL that resolves to a non-public address (loopback, RFC1918, link-local, CGNAT, Docker/internal hostnames, numeric tricks such as `127.1`, trailing dots). The check covers the initial URL (HTTP 400 with the reason), every redirect hop and every sub-request made by the page (the page is then discarded with an error message). `browser-tor` and `browser-i2p` do not need it: their exit is the anonymity network.
+
+**Concurrency.** Heavy work is serialised with `MAX_CONCURRENT` (default 2; `browser-tor` defaults to 1 because `NEWNYM` changes the circuits used by other in-flight requests).
+
+**Network-level egress guard.** The application checks are the first line; `hardening/` ships a small systemd service that adds `OUTPUT` rules inside the network namespace of the containers that exit with the VPS IP. See `hardening/README.md`.
+
+**Proxy isolation.** `tor-proxy` and `i2p-proxy` live on a dedicated `proxy-net` network. Only `browser-tor`, `browser-i2p` (and the Camofox Tor/I2P instances of hermes-stealth-stack) are attached to both `ai-net` and `proxy-net`. Create it once: `docker network create proxy-net`.
+
+**Tor bridges.** `tor-snowflake/torrc` uses the two official Snowflake bridge lines shipped with Tor Browser (tor-browser-build, April 2026). Several `Bridge` lines with the same fingerprint make Tor treat them as a single bridge. Refresh them from `projects/tor-expert-bundle/pt_config.json` in tor-browser-build when the broker or the STUN list change.
+
+**Known limits.** `browser-clear` runs Chromium with `--no-sandbox` inside the container, which is why the egress guard exists. Redirect chains inside Solverr's own browser are not inspected. A DNS-rebinding window exists between the guard's lookup and the browser's own lookup.
