@@ -1,0 +1,11 @@
+[Unit]
+Description=Egress guard per i container con uscita diretta
+After=docker.service
+Requires=docker.service
+
+[Service]
+ExecStart=/usr/local/sbin/egress-guard.sh loop
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -2,7 +2,7 @@
 
 # 🕵️‍♂️ Open WebUI Tor, I2P & Stealth Web Scraper 🕷️
 
-**v3.3 — A robust, multi-path web scraping infrastructure for local AI models.**
+**v3.4 — A robust, multi-path web scraping infrastructure for local AI models.**
 
 A full-stack Docker solution that feeds clean, optimized Markdown to your local LLM — saving RAM, cutting token usage, bypassing anti-bot measures and cookie walls, and keeping your OpSec intact across **Clearnet, Tor (.onion), I2P (.i2p) and anonymous search**.
 
@@ -41,6 +41,7 @@ curl -fsSL https://raw.githubusercontent.com/thotganesh/openwebui-tor-i2p-scrape
 
 ## 📑 Table of Contents
 
+- [🆕 What's new in v3.4](#-whats-new-in-v34)
 - [🆕 What's new in v3.3](#-whats-new-in-v33)
 - [🆕 What's new in v3.2](#-whats-new-in-v32)
 - [🆕 What's new in v3.1](#-whats-new-in-v31)
@@ -68,9 +69,20 @@ curl -fsSL https://raw.githubusercontent.com/thotganesh/openwebui-tor-i2p-scrape
 - [📋 Changelog](#-changelog)
 - [📊 Verified performance](#-verified-performance)
 - [🚫 Removed engines and why](#-removed-engines-and-why)
+- [🛡️ Egress guard (consigliato)](#️-egress-guard-consigliato)
 - [⚖️ Responsible use](#️-responsible-use)
 
 ---
+
+## 🆕 What's new in v3.4
+
+| Area | Change | Why it matters |
+|---|---|---|
+| **Egress guard** | New `scripts/` with `egress-guard.sh`, systemd unit, and idempotent installer | Blocks containers from reaching private networks (RFC1918, link-local, Docker gateway) at the network-namespace level, even for requests fired by page JavaScript |
+| **Installer** | `sudo bash scripts/install-egress-guard.sh install` | One command; supports `uninstall` and `status`; re-runs are no-ops |
+
+> [!NOTE]
+> The egress guard is **optional but recommended**. It does not change the behavior of any reader.
 
 ## 🆕 What's new in v3.3
 
@@ -1156,6 +1168,14 @@ The integration scripts (test battery) need the real stack and are run locally.
 
 ## 📋 Changelog
 
+### v3.4 — Egress guard
+
+- New `scripts/`: `egress-guard.sh`, `egress-guard.service`, `install-egress-guard.sh`
+- Idempotent installer; supports `install`, `uninstall`, `status`
+- Blocks outbound traffic to RFC1918, link-local, CGNAT, multicast, and Docker gateway from `browser-http`, `browser-clear`, `browser-camoufox`, `camofox`, `solverr`
+- Allowlist preserved: `browser-clear` -> `solverr:8191`, loopback, ESTABLISHED/RELATED
+- README: new "Egress guard (consigliato)" section
+
 ### v3.3 — SSRF guard, egress protection, official Snowflake bridges
 
 - `browser-http`, `browser-clear`, `browser-camoufox`: `blocked_reason()` with DNS resolution; rejects private IPs, `.local`/`.internal`/`.lan`, numeric hosts, hostnames without a dot
@@ -1239,6 +1259,36 @@ Measured by the maintainer on a VPS with the v3.1 stack. Figures are the length 
 The remaining engines (Ahmia, Tor66, DuckDuckGo onion, Legwork) are general-purpose indexes. No index is perfectly filtered, so treat every result as untrusted (see below).
 
 ---
+
+## 🛡️ Egress guard (consigliato)
+
+Protezione a livello host che impedisce a Protezione a livello host che impedisce a `browser-http`, `browser-clear`, `browser-camoufox`, `camofox` e `solverr` di raggiungere reti private (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16, 100.64.0.0/10) e il gateway Docker.
+
+**Perché serve.** L'SSRF guard applicativo blocca URL e redirect verso host interni. Non ferma le richieste che una pagina esegue dal proprio JavaScript verso servizi sulla stessa rete. L'egress guard chiude quel canale dentro il network namespace del container.
+
+**Installazione:**
+
+```bash
+sudo bash ~/ai-stack/scripts/install-egress-guard.sh install
+```
+
+**Verifica:**
+
+```bash
+systemctl is-active egress-guard
+docker exec browser-clear python3 -c "import socket;socket.create_connection(('open-webui',8080),4)"
+# atteso: ConnectionRefusedError
+docker exec browser-http python3 -c "import urllib.request;print(urllib.request.urlopen('https://example.com',timeout=10).status)"
+# atteso: 200
+```
+
+**Disinstallazione:**
+
+```bash
+sudo bash ~/ai-stack/scripts/install-egress-guard.sh uninstall
+```
+
+**Limiti noti:** le regole stanno fuori dal container; un container appena ricreato resta senza regole per max 15s; copre solo IPv4.
 
 ## ⚖️ Responsible use
 
