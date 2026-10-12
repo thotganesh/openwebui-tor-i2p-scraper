@@ -2,7 +2,7 @@
 
 # 🕵️‍♂️ Open WebUI Tor, I2P & Stealth Web Scraper 🕷️
 
-**v3.2 — A robust, multi-path web scraping infrastructure for local AI models.**
+**v3.3 — A robust, multi-path web scraping infrastructure for local AI models.**
 
 A full-stack Docker solution that feeds clean, optimized Markdown to your local LLM — saving RAM, cutting token usage, bypassing anti-bot measures and cookie walls, and keeping your OpSec intact across **Clearnet, Tor (.onion), I2P (.i2p) and anonymous search**.
 
@@ -41,6 +41,7 @@ curl -fsSL https://raw.githubusercontent.com/thotganesh/openwebui-tor-i2p-scrape
 
 ## 📑 Table of Contents
 
+- [🆕 What's new in v3.3](#-whats-new-in-v33)
 - [🆕 What's new in v3.2](#-whats-new-in-v32)
 - [🆕 What's new in v3.1](#-whats-new-in-v31)
 - [🌟 Core Features](#-core-features)
@@ -70,6 +71,19 @@ curl -fsSL https://raw.githubusercontent.com/thotganesh/openwebui-tor-i2p-scrape
 - [⚖️ Responsible use](#️-responsible-use)
 
 ---
+
+## 🆕 What's new in v3.3
+
+| Area | Change | Why it matters |
+|---|---|---|
+| **SSRF guard** | `blocked_reason()` + DNS resolution check injected into `browser-http`, `browser-clear`, `browser-camoufox` | Rejects private IPs, `.local`/`.internal`/`.lan`, numeric hosts, hostnames without a dot. Same defense in all three readers |
+| **Redirect chain** | `chain_check()` on every navigation | If any redirect (or the final URL) points to a non-public host, the page is discarded. Applies to tier 2 and tier 3 |
+| **Concurrency** | `MAX_CONCURRENT` semaphore in `browser-tor` (default 1) and `browser-i2p` (default 2) | Bounds parallel browser launches; a burst of tool calls no longer exhausts RAM |
+| **Tor bridges** | `torrc` uses official Snowflake bridges from tor-browser-build (2026-04-14) with `CircuitBuildTimeout 90` and `LearnCircuitBuildTimeout 0` | Stable bootstrap in ~140s; fewer spurious circuit rebuilds |
+| **Image digests** | `i2pd`, `searxng`, `solverr` pinned to `sha256:` in `docker-compose.yml` | Supply-chain hardening; a compromised `:latest` tag cannot silently replace the running image |
+
+> [!NOTE]
+> v3.3 does not change the Open WebUI tools. No re-import needed.
 
 ## 🆕 What's new in v3.2
 
@@ -1141,6 +1155,14 @@ The integration scripts (test battery) need the real stack and are run locally.
 ---
 
 ## 📋 Changelog
+
+### v3.3 — SSRF guard, egress protection, official Snowflake bridges
+
+- `browser-http`, `browser-clear`, `browser-camoufox`: `blocked_reason()` with DNS resolution; rejects private IPs, `.local`/`.internal`/`.lan`, numeric hosts, hostnames without a dot
+- `browser-clear`, `browser-camoufox`: `chain_check()` verifies every redirect; page discarded on internal redirect target
+- `browser-tor` (default 1) and `browser-i2p` (default 2): `MAX_CONCURRENT` semaphore
+- `torrc`: official Snowflake bridges (tor-browser-build 2026-04-14), circuit tuning
+- `docker-compose.yml`: `i2pd`/`searxng`/`solverr` pinned to `sha256` digests
 
 ### v3.2 — URL validation and CI
 
