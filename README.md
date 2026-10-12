@@ -2,7 +2,7 @@
 
 # 🕵️‍♂️ Open WebUI Tor, I2P & Stealth Web Scraper 🕷️
 
-**v3.5 — A robust, multi-path web scraping infrastructure for local AI models.**
+**v3.5.2 — A robust, multi-path web scraping infrastructure for local AI models.**
 
 A full-stack Docker solution that feeds clean, optimized Markdown to your local LLM — saving RAM, cutting token usage, bypassing anti-bot measures and cookie walls, and keeping your OpSec intact across **Clearnet, Tor (.onion), I2P (.i2p) and anonymous search**.
 
@@ -1178,6 +1178,18 @@ The integration scripts (test battery) need the real stack and are run locally.
 ---
 
 ## 📋 Changelog
+
+### v3.5.2 — install.sh hardening
+
+- `download()` now preserves the local file on first overwrite as `<file>.pre-install`, so a re-run of the installer does not silently erase local patches
+- Tor ControlPort hash is no longer echoed to the log (only the message "computed")
+- Tor bootstrap wait loop now reports a warning if 100% is not reached within 120s
+- `docker compose up -d --remove-orphans` cleans up stale containers from earlier runs
+- `.gitignore`: exclude `*.pre-install`
+
+### v3.5.1 — README tool version alignment
+
+- `web_tool.py` 1.3.1, `darknet_tool.py` 3.3.1 in the README table and paste instructions
 
 ### v3.5 — SSRF guard on browser-i2p, async chain_check
 

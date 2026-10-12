@@ -104,6 +104,12 @@ step "3/9 Downloading files from GitHub"
 download() {
     local src="$1"
     local dst="$2"
+    # Preserve the local file the first time it would be overwritten.
+    # The .pre-install copy is never touched again, so a re-run cannot
+    # silently erase local patches.
+    if [ -f "$dst" ] && [ ! -f "${dst}.pre-install" ]; then
+        cp -a "$dst" "${dst}.pre-install"
+    fi
     if curl -fsSL "${RAW_BASE}/${src}" -o "$dst"; then
         log "  ${src}"
     else
@@ -164,7 +170,7 @@ else
         err "Failed to compute Tor ControlPort hash. Check Docker/network."
         exit 1
     fi
-    log "Tor hash computed: ${TOR_HASH:0:20}..."
+    log "Tor ControlPort hash computed."
 
     cat > .env << EOF
 TOR_CONTROL_PASSWORD=$TOR_PASSWORD
@@ -233,7 +239,7 @@ log "All images built"
 # ============================================================
 step "8/9 Starting containers"
 
-docker compose up -d
+docker compose up -d --remove-orphans
 info "Waiting for services to stabilize (30 seconds)..."
 sleep 30
 log "Containers status:"
@@ -245,13 +251,19 @@ docker compose ps
 step "9/9 Health checks"
 
 info "Waiting for Tor to bootstrap (up to 120s)..."
+TOR_BOOT=false
 for _ in $(seq 1 60); do
     if docker compose logs tor-proxy 2>&1 | grep -q "Bootstrapped 100%"; then
         log "Tor bootstrapped 100%"
+        TOR_BOOT=true
         break
     fi
     sleep 2
 done
+if [ "$TOR_BOOT" != "true" ]; then
+    warn "Tor did not reach 100% within 120s. Check 'docker compose logs tor-proxy'."
+    warn "Snowflake needs outgoing UDP; the first bootstrap can take longer."
+fi
 
 echo ""
 info "Running health checks..."
