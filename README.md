@@ -1179,6 +1179,29 @@ The integration scripts (test battery) need the real stack and are run locally.
 
 ---
 
+## 🔄 Updating
+
+**If you cloned the repository with `git`:**
+
+    cd ~/ai-stack
+    ./update.sh
+
+The script:
+
+1. Refuses if the working tree is dirty (commit or stash first)
+2. Backs up `.env` and the current `HEAD` to `~/stack-backup-*-ai-stack/`
+3. Runs `git fetch` + `git pull --ff-only`
+4. Rebuilds the images (`docker compose build`)
+5. Restarts the stack (`docker compose up -d --remove-orphans`)
+6. Waits for Tor to reach `Bootstrapped 100%`
+7. Prints the container status
+
+**If you installed with `curl` (no `.git` directory):**
+
+    bash install.sh
+
+The installer overwrites every file it downloads but preserves `.env` and `searxng-config/settings.yml`. Starting from v3.5.2, the file being replaced is also saved as `<file>.pre-install` the first time, so local edits can be recovered.
+
 ## 📋 Changelog
 
 ### v3.5.5 — pin Snowflake client to a stable tag
