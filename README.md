@@ -321,6 +321,7 @@ cd openwebui-tor-i2p-scraper
 
 # 2) Create the shared Docker network and connect OpenWebUI (skip what already exists)
 docker network create ai-net
+docker network create proxy-net   # isolated network for tor-proxy / i2p-proxy
 docker network connect ai-net open-webui
 
 # 3) I2P data folder: i2pd runs as non-root and needs write access
