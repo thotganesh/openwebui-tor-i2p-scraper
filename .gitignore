@@ -49,3 +49,8 @@ Thumbs.db
 browser-i2p/profile/
 .env.openwebui
 backups/
+
+# Backup locali degli script di fix (non versionare)
+*.bak-*
+tor-snowflake/torrc.new
+tor-snowflake/torrc.test

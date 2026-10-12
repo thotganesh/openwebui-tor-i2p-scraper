@@ -5,6 +5,9 @@ from playwright.async_api import async_playwright
 from readability import Document
 import html2text
 
+import asyncio as _aio, os as _os
+_SEM = _aio.Semaphore(int(_os.environ.get("MAX_CONCURRENT", "2")))
+
 app = FastAPI()
 
 
@@ -104,6 +107,11 @@ def pulisci_testo(html_content: str) -> str:
 
 @app.post("/browse")
 async def browse(req: BrowseRequest):
+    async with _SEM:
+        return await _browse_impl(req)
+
+
+async def _browse_impl(req: BrowseRequest):
     async with async_playwright() as p:
         browser = None
         try:
