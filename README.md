@@ -189,8 +189,8 @@ This project ships as **two Open WebUI tools**. Ready-to-import files are in [`o
 
 | Tool | File | Version | Purpose |
 |---|---|---|---|
-| **Web** | [`web_tool.py`](openwebui-tools/web_tool.py) | 1.2.0 | Search (SearXNG) + read clearnet pages via the 3-tier fallback |
-| **Darknet** | [`darknet_tool.py`](openwebui-tools/darknet_tool.py) | 3.2.0 | Search + read Tor (.onion) and I2P (.i2p) |
+| **Web** | [`web_tool.py`](openwebui-tools/web_tool.py) | 1.3.1 | Search (SearXNG) + read clearnet pages via the 3-tier fallback |
+| **Darknet** | [`darknet_tool.py`](openwebui-tools/darknet_tool.py) | 3.3.1 | Search + read Tor (.onion) and I2P (.i2p) |
 
 **Web** exposes:
 - `search_web(query, num=5)` — SearXNG meta-search (max 10 results)
@@ -936,7 +936,7 @@ docker exec open-webui curl -s -m 10 http://solverr:8191/                 # {"ms
 
 #### 11.2 Tool 1: Web (search + 3-tier reader)
 
-In OpenWebUI: **Admin → Workspace → Tools → new tool**. Name: `Web`. Paste [`openwebui-tools/web_tool.py`](openwebui-tools/web_tool.py) (version 1.1.0).
+In OpenWebUI: **Admin → Workspace → Tools → new tool**. Name: `Web`. Paste [`openwebui-tools/web_tool.py`](openwebui-tools/web_tool.py) (version 1.3.1).
 
 The core of the 3-tier logic:
 
@@ -984,7 +984,7 @@ async def read_web_full(self, url: str) -> str:
 
 #### 11.3 Tool 2: Darknet (Tor + I2P)
 
-Name: `Darknet`. Paste [`openwebui-tools/darknet_tool.py`](openwebui-tools/darknet_tool.py) (version 3.1.0).
+Name: `Darknet`. Paste [`openwebui-tools/darknet_tool.py`](openwebui-tools/darknet_tool.py) (version 3.3.1).
 
 The Ahmia rotating-token logic — fetch the home page, extract the hidden token with an **atomic** regex (name and value from the *same* `<input>` tag), then query with the token and a browser User-Agent:
 
@@ -1255,7 +1255,7 @@ The integration scripts (test battery) need the real stack and are run locally.
 
 ## 📊 Verified performance
 
-Measured by the maintainer on a VPS with the v3.1 stack. Figures are the length of the text returned by the **service**; the OpenWebUI tools cap what the model receives at 6,000 characters. Results depend on IP reputation and on the target's current anti-bot configuration.
+Measured by the maintainer on a VPS with the v3.5 stack. Figures are the length of the text returned by the **service**; the OpenWebUI tools cap what the model receives at 6,000 characters. Results depend on IP reputation and on the target's current anti-bot configuration.
 
 | Target | Challenge | Path | Result |
 |---|---|---|---|
