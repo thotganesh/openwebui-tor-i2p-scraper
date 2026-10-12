@@ -9,8 +9,8 @@ inbound connections and `browser-clear -> solverr:8191` are allowed.
 
 Install (as root, on the Docker host):
 
-    install -m 755 hardening/egress-guard.sh /usr/local/sbin/egress-guard.sh
-    install -m 644 hardening/egress-guard.service /etc/systemd/system/egress-guard.service
+    install -m 755 scripts/egress-guard.sh /usr/local/sbin/egress-guard.sh
+    install -m 644 scripts/egress-guard.service /etc/systemd/system/egress-guard.service
     systemctl daemon-reload && systemctl enable --now egress-guard
 
 The service re-applies the rules every 15 s, so they come back after a container is

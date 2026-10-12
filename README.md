@@ -1363,7 +1363,7 @@ All tools validate URLs before use: `file://`, loopback, private and internal ho
 
 **Concurrency.** Heavy work is serialised with `MAX_CONCURRENT` (default 2; `browser-tor` defaults to 1 because `NEWNYM` changes the circuits used by other in-flight requests).
 
-**Network-level egress guard.** The application checks are the first line; `hardening/` ships a small systemd service that adds `OUTPUT` rules inside the network namespace of the containers that exit with the VPS IP. See `hardening/README.md`.
+**Network-level egress guard.** The application checks are the first line; `scripts/` ships a small systemd service that adds `OUTPUT` rules inside the network namespace of the containers that exit with the VPS IP. See `scripts/README.md`.
 
 **Proxy isolation.** `tor-proxy` and `i2p-proxy` live on a dedicated `proxy-net` network. Only `browser-tor`, `browser-i2p` (and the Camofox Tor/I2P instances of hermes-stealth-stack) are attached to both `ai-net` and `proxy-net`. Create it once: `docker network create proxy-net`.
 
