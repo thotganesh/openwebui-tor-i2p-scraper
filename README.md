@@ -2,7 +2,7 @@
 
 # 🕵️‍♂️ Open WebUI Tor, I2P & Stealth Web Scraper 🕷️
 
-**v3.5.2 — A robust, multi-path web scraping infrastructure for local AI models.**
+**v3.5.3 — A robust, multi-path web scraping infrastructure for local AI models.**
 
 A full-stack Docker solution that feeds clean, optimized Markdown to your local LLM — saving RAM, cutting token usage, bypassing anti-bot measures and cookie walls, and keeping your OpSec intact across **Clearnet, Tor (.onion), I2P (.i2p) and anonymous search**.
 
@@ -70,6 +70,7 @@ curl -fsSL https://raw.githubusercontent.com/thotganesh/openwebui-tor-i2p-scrape
 - [📋 Changelog](#-changelog)
 - [📊 Verified performance](#-verified-performance)
 - [🚫 Removed engines and why](#-removed-engines-and-why)
+- [Rotazione periodica delle credenziali](#rotazione-periodica-delle-credenziali)
 - [🛡️ Egress guard (consigliato)](#️-egress-guard-consigliato)
 - [⚖️ Responsible use](#️-responsible-use)
 
@@ -1179,6 +1180,12 @@ The integration scripts (test battery) need the real stack and are run locally.
 
 ## 📋 Changelog
 
+### v3.5.3 — more Snowflake bridges, rotation script
+
+- `torrc`: 4 Snowflake bridges (was 2) for better circuit availability
+- New `scripts/rotate-tor-password.sh`: idempotent rotation of `TOR_CONTROL_PASSWORD` + `TOR_CONTROL_HASH` with backup, recreate, bootstrap wait, and verification
+- README: new section on periodic credential rotation
+
 ### v3.5.2 — install.sh hardening
 
 - `download()` now preserves the local file on first overwrite as `<file>.pre-install`, so a re-run of the installer does not silently erase local patches
@@ -1288,6 +1295,25 @@ Measured by the maintainer on a VPS with the v3.5 stack. Figures are the length 
 The remaining engines (Ahmia, Tor66, DuckDuckGo onion, Legwork) are general-purpose indexes. No index is perfectly filtered, so treat every result as untrusted (see below).
 
 ---
+
+## Rotazione periodica delle credenziali
+
+Ogni 6-12 mesi, ruota `TOR_CONTROL_PASSWORD` per igiene.
+
+Esecuzione:
+
+    sudo bash ~/ai-stack/scripts/rotate-tor-password.sh
+
+Lo script:
+
+1. Fa un backup di `.env` in `~/stealth-backup-*/rotate-tor-password/`
+2. Genera una nuova password (48 hex) e il suo hash
+3. Aggiorna `.env` (mode 600)
+4. Ricrea `tor-proxy` e `browser-tor`
+5. Aspetta il bootstrap di Tor (max 180s)
+6. Verifica con un browse su `check.torproject.org`
+
+Nota: `hermes-stealth-stack` legge `TOR_CONTROL_PASSWORD` dal proprio `.env` (usato solo in modalità `BROWSER_TOR=hermes`). Se non la usi, non serve aggiornarlo.
 
 ## 🛡️ Egress guard (consigliato)
 
