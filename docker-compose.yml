@@ -11,6 +11,21 @@ services:
       - tor-data:/var/lib/tor
     restart: unless-stopped
 
+  # Secondo client Tor con circuiti indipendenti: separa i circuiti di
+  # camofox-tor (hermes-stealth-stack) da quelli di browser-tor. Un NEWNYM
+  # su tor-proxy non tocca piu' i circuiti di camofox-tor, e viceversa.
+  tor-proxy-camofox:
+    build: ./tor-snowflake
+    container_name: tor-proxy-camofox
+    networks: [proxy-net]
+    environment:
+      - TOR_CONTROL_HASH=${TOR_CONTROL_HASH:?Set TOR_CONTROL_HASH in .env}
+    command: ["sh", "-c", "exec tor -f /etc/tor/torrc --HashedControlPassword \"$$TOR_CONTROL_HASH\""]
+    volumes:
+      - ./tor-snowflake/torrc:/etc/tor/torrc:ro
+      - tor-data-camofox:/var/lib/tor
+    restart: unless-stopped
+
   browser-tor:
     build: ./browser-tor
     container_name: browser-tor
@@ -176,3 +191,4 @@ networks:
 
 volumes:
   tor-data:
+  tor-data-camofox:
