@@ -2,7 +2,7 @@
 
 # 🕵️‍♂️ Open WebUI Tor, I2P & Stealth Web Scraper 🕷️
 
-**v3.5.5 — A robust, multi-path web scraping infrastructure for local AI models.**
+**v3.6.1 — A robust, multi-path web scraping infrastructure for local AI models.**
 
 A full-stack Docker solution that feeds clean, optimized Markdown to your local LLM — saving RAM, cutting token usage, bypassing anti-bot measures and cookie walls, and keeping your OpSec intact across **Clearnet, Tor (.onion), I2P (.i2p) and anonymous search**.
 
@@ -41,6 +41,8 @@ curl -fsSL https://raw.githubusercontent.com/thotganesh/openwebui-tor-i2p-scrape
 
 ## 📑 Table of Contents
 
+- [🆕 What's new in v3.6](#-whats-new-in-v36)
+- [🆕 What's new in v3.5.6](#-whats-new-in-v356)
 - [🆕 What's new in v3.5](#-whats-new-in-v35)
 - [🆕 What's new in v3.4](#-whats-new-in-v34)
 - [🆕 What's new in v3.3](#-whats-new-in-v33)
@@ -71,10 +73,29 @@ curl -fsSL https://raw.githubusercontent.com/thotganesh/openwebui-tor-i2p-scrape
 - [📊 Verified performance](#-verified-performance)
 - [🚫 Removed engines and why](#-removed-engines-and-why)
 - [Periodic credential rotation](#periodic-credential-rotation)
+- [🔍 Google search via 4get (optional)](#-google-search-via-4get-optional)
 - [🛡️ Egress guard](#-egress-guard)
 - [⚖️ Responsible use](#️-responsible-use)
 
 ---
+
+## 🆕 What's new in v3.6
+
+| Area | Change | Why it matters |
+|---|---|---|
+| **Google search** | New `fourget`, `fourplay`, `firefox-4play` containers drive a real Firefox via WebSocket to return Google/Brave/DuckDuckGo results without an API key | SearXNG's Google engine gets CAPTCHA'd from datacenter IPs; this route uses a warm Firefox profile instead |
+| **Open WebUI tool** | `openwebui-tools/search_4get.py` -- `search_4get(query, max_results, engine)` with automatic fallback to `searxng` | One function, three engines; no API key, no proxy |
+| **Hermes plugin** | `fourget_search` in the [hermes-stealth-stack](https://github.com/thotganesh/hermes-stealth-stack) | Same engine, available to Hermes agents |
+| **License** | `page-render.js` (AGPL-3.0) is downloaded by `install.sh` on first run; the repo stays MIT | Avoids a license conflict |
+
+> [!NOTE]
+> First-time setup requires a one-time VNC warm-up (5 minutes) to establish the Google session. See [`docs/WARMUP-4PLAY.md`](docs/WARMUP-4PLAY.md).
+
+## 🆕 What's new in v3.5.6
+
+| Area | Change | Why it matters |
+|---|---|---|
+| **Updater** | New `update.sh` script for safe in-place upgrades | Refuses to run if the working tree is dirty, backs up `.env` and `HEAD`, then `git pull --ff-only` + rebuild + up |
 
 ## 🆕 What's new in v3.5
 
@@ -1203,6 +1224,27 @@ The script:
 The installer overwrites every file it downloads but preserves `.env` and `searxng-config/settings.yml`. Starting from v3.5.2, the file being replaced is also saved as `<file>.pre-install` the first time, so local edits can be recovered.
 
 ## 📋 Changelog
+
+### v3.6.1 — expanded 4get documentation
+
+- README: expanded the "Google search via 4get" section with warm-up steps, API reference, client integration (Open WebUI + Hermes), fallback chain, troubleshooting table, and rollback procedure
+- Fixed Credits section position (was inserted mid-document)
+- Restored the full "Known limits" paragraph in Security hardening
+- No code changes
+
+### v3.6.0 — 4get+4play Google search
+
+- New `fourget`, `fourplay`, `firefox-4play` containers (multi-engine search frontend, WebSocket bridge, Firefox with 4play extension)
+- New `4play-build/` directory with Dockerfile + package.json (MIT); `page-render.js` (AGPL-3.0) is downloaded by `install.sh` on first run
+- New `docs/WARMUP-4PLAY.md` — one-time VNC warm-up procedure
+- New `openwebui-tools/search_4get.py` — Open WebUI tool with SearXNG fallback
+- New "Google search via 4get" and "Credits" sections in the README
+- Hermes counterpart: `fourget_search` plugin (v1.1.0)
+
+### v3.5.6 — add update.sh
+
+- New `update.sh`: refuses if the working tree is dirty; backs up `.env` and `HEAD`; `git fetch` + `git pull --ff-only`; `docker compose build` + `up -d --remove-orphans`; waits for Tor bootstrap; prints status
+- README: new "Updating" section covering both git and curl installs
 
 ### v3.5.5 — pin Snowflake client to a stable tag
 
