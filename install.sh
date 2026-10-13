@@ -150,6 +150,21 @@ download "openwebui-tools/darknet_tool.py" "openwebui-tools/darknet_tool.py"
 
 log "All files downloaded"
 
+# ---- 4play-build: Dockerfile + package.json are MIT and live in the repo.
+# ---- page-render.js is AGPL-3.0-only and is downloaded from upstream on
+# ---- first run to avoid a license conflict with this repo's MIT license.
+mkdir -p 4play-build
+if [ ! -s 4play-build/page-render.js ]; then
+    log "  downloading 4play page-render.js from git.lolcat.ca (AGPL-3.0)"
+    if ! curl -fsSL "https://git.lolcat.ca/lolcat/4get/raw/branch/master/extra/4play/page-render.js" \
+            -o 4play-build/page-render.js; then
+        err "  Failed to download page-render.js. Check network access to git.lolcat.ca"
+    fi
+    log "  page-render.js downloaded"
+else
+    log "  4play page-render.js already present"
+fi
+
 # ============================================================
 # STEP 4: Generate secrets
 # ============================================================

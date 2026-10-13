@@ -119,6 +119,54 @@ services:
       start_period: 20s
     restart: unless-stopped
 
+  fourget:
+    image: luuul/4get:1.0.60
+    container_name: fourget
+    networks: [ai-net, proxy-net]
+    environment:
+      - FOURGET_PROTO=http
+      - FOURGET_SERVER_NAME=fourget.local
+      - FOURGET_FPLAY_EXTERNAL_ENDPOINT=http://fourplay:3000
+      - FOURGET_FPLAY_PASSWORD=cnc
+      - FOURGET_FPLAY_TIMEOUT=30000
+      - FOURGET_FPLAY_ENABLE_API=true
+    volumes:
+      - ./fourget-data:/var/www/html/data:rw
+      - ./fourget-proxies:/var/www/html/proxies:rw
+    ports:
+      - "127.0.0.1:8090:80"
+    restart: unless-stopped
+
+  fourplay:
+    build: ./4play-build
+    image: local/4get-4play:latest
+    container_name: fourplay
+    networks: [ai-net]
+    environment:
+      - FOURPLAY_PORT=3030
+      - FOURPLAY_PASSWORD=cnc
+      - FOURPLAY_COMMAND_TIMEOUT=5000
+    ports:
+      - "127.0.0.1:3030:3030"
+    restart: unless-stopped
+
+  firefox-4play:
+    image: jlesage/firefox:latest
+    container_name: firefox-4play
+    networks: [ai-net]
+    environment:
+      - DISPLAY_WIDTH=1920
+      - DISPLAY_HEIGHT=1080
+      - KEEP_APP_RUNNING=1
+      - VNC_PASSWORD=cnc
+    volumes:
+      - ./firefox-4play-data:/config:rw
+    ports:
+      - "127.0.0.1:5900:5900"
+    shm_size: 1gb
+    mem_limit: 2g
+    restart: unless-stopped
+
 networks:
   ai-net:
     external: true

@@ -1351,6 +1351,31 @@ The script:
 
 Note: `hermes-stealth-stack` reads `TOR_CONTROL_PASSWORD` from its own `.env` (used by `install-browser-tor.sh` only in `BROWSER_TOR=hermes` mode). If you do not use that mode, there is nothing to update. If you do, update `~/hermes-stealth-stack/.env` with the same value.
 
+## 🔍 Google search via 4get (optional)
+
+SearXNG queries Google, but Google aggressively CAPTCHAs datacenter IPs and blocks headless browsers. For reliable Google results without an API key and without proxies, the stack ships [4get](https://git.lolcat.ca/lolcat/4get) + [4play](https://git.lolcat.ca/lolcat/4get/src/branch/master/extra/4play), a multi-engine search frontend that drives a real Firefox via WebSocket.
+
+**Containers added:**
+
+| Container | Role | Host port |
+|---|---|---|
+| `fourget` | Search frontend + JSON API | 127.0.0.1:8090 |
+| `fourplay` | WebSocket bridge to Firefox | 127.0.0.1:3030 |
+| `firefox-4play` | Firefox with the 4play extension (VNC) | 127.0.0.1:5900 |
+
+**First-time warm-up (required):** Google needs a Firefox profile that has already completed a real search. Without it, every query gets a CAPTCHA. See [`docs/WARMUP-4PLAY.md`](docs/WARMUP-4PLAY.md) — 5 minutes, once.
+
+**API:** `http://fourget:80/api/v1/web?s=<query>&scraper=google` (returns JSON). Other engines: `brave`, `duckduckgo`, `startpage`, or `auto`.
+
+**Client integration:**
+
+- Open WebUI: tool `search_4get` in [`openwebui-tools/`](openwebui-tools/)
+- Hermes: plugin `fourget_search` in [hermes-stealth-stack](https://github.com/thotganesh/hermes-stealth-stack)
+
+**Fallback chain:** `search_4get` → `fourget` (Google/Brave/DDG via warm Firefox) → on failure → `searxng` → on failure → error.
+
+**Rollback:** remove the three services from `docker-compose.yml`, then `docker compose down fourget fourplay firefox-4play && rm -rf 4play-build/ fourget-data/ fourget-proxies/ firefox-4play-data/`.
+
 ## 🛡️ Egress guard (recommended)
 
 Host-level protection that prevents `browser-http`, `browser-clear`, `browser-camoufox`, `camofox` and `solverr` from reaching private networks (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16, 100.64.0.0/10) and the Docker gateway.
@@ -1406,4 +1431,16 @@ All tools validate URLs before use: `file://`, loopback, private and internal ho
 
 **Snowflake pin.** `tor-snowflake/Dockerfile` builds `snowflake-client` from tag `v2.9.2` (last stable release). Bump `ARG SNOWFLAKE_TAG` deliberately; the image never builds from `HEAD`.
 
-**Known limits.** `browser-clear` runs Chromium with `--no-sandbox` inside the container, which is why the egress guard exists. Redirect chains inside Solverr's own browser are not inspected. A DNS-rebinding window exists between the guard's lookup and the browser's own lookup.
+**Known limits.** `browser-clear` runs Chromium with `--no-sandbox` inside the container, which is why the egress guard exists.
+
+---
+
+## Credits
+
+- [4get](https://git.lolcat.ca/lolcat/4get) by [lolcat](https://lolcat.ca) — multi-engine search frontend (AGPL-3.0)
+- [4play](https://git.lolcat.ca/lolcat/4get/src/branch/master/extra/4play) by lolcat — browser bridge for 4get (AGPL-3.0)
+- [SearXNG](https://github.com/searxng/searxng) — privacy-respecting metasearch (AGPL-3.0)
+- [Playwright](https://playwright.dev/), [Camoufox](https://camoufox.com/), [Patchright](https://github.com/Kaliiiiiiiiii-Vinyzu/patchright) — browser automation and stealth
+- [Tor Project](https://www.torproject.org/) — Snowflake pluggable transport
+- [i2pd](https://i2pd.website/) — I2P router
+ Redirect chains inside Solverr's own browser are not inspected. A DNS-rebinding window exists between the guard's lookup and the browser's own lookup.

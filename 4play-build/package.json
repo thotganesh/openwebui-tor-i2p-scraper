@@ -1,0 +1,11 @@
+{
+  "name": "4play",
+  "version": "1.0.0",
+  "description": "Bridge server for 4get browser-driven search",
+  "license": "MIT",
+  "type": "commonjs",
+  "main": "page-render.js",
+  "dependencies": {
+    "ws": "^8.21.2"
+  }
+}
