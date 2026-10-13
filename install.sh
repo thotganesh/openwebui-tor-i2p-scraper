@@ -24,6 +24,37 @@
 
 set -euo pipefail
 
+# --- --dry-run / --help ---
+DRY_RUN=0
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run) DRY_RUN=1 ;;
+    -h|--help)
+      cat <<HELP
+Usage: $0 [--dry-run]
+
+  --dry-run   mostra cosa farebbe senza modificare nulla:
+              niente file scritti, niente secrets generati,
+              niente network/container toccati.
+HELP
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $arg" >&2
+      exit 2
+      ;;
+  esac
+done
+
+run() {
+  # Esegue il comando, o lo stampa se --dry-run
+  if [ "$DRY_RUN" = "1" ]; then
+    echo "[dry-run] $*"
+    return 0
+  fi
+  "$@"
+}
+
 # --- Colors ---
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -91,12 +122,14 @@ log "Disk space: ${AVAIL_GB}GB available (need ~35GB for the first install)"
 # ============================================================
 step "2/9 Creating directories"
 
-mkdir -p "$STACK_DIR"/{tor-snowflake,browser-tor,browser-clear,browser-camoufox,browser-http,browser-i2p,searxng-config,openwebui-tools,i2p-data}
+run mkdir -p "$STACK_DIR"/{tor-snowflake,browser-tor,browser-clear,browser-camoufox,browser-http,browser-i2p,searxng-config,openwebui-tools,i2p-data}
 cd "$STACK_DIR"
-# i2pd gira come UID 100 / GID 65533 nell'immagine. Dai solo i permessi
-# necessari (750) invece di 777.
-chown -R 100:65533 i2p-data 2>/dev/null || true
-chmod -R 750 i2p-data
+if [ "$DRY_RUN" != "1" ]; then
+  # i2pd gira come UID 100 / GID 65533 nell'immagine. Dai solo i permessi
+  # necessari (750) invece di 777.
+  chown -R 100:65533 i2p-data 2>/dev/null || true
+  chmod -R 750 i2p-data
+fi
 log "Created $STACK_DIR with subdirectories"
 
 # ============================================================
@@ -107,6 +140,10 @@ step "3/9 Downloading files from GitHub"
 download() {
     local src="$1"
     local dst="$2"
+    if [ "$DRY_RUN" = "1" ]; then
+        echo "[dry-run] download ${src} -> ${dst}"
+        return 0
+    fi
     # Preserve the local file the first time it would be overwritten.
     # The .pre-install copy is never touched again, so a re-run cannot
     # silently erase local patches.
@@ -158,12 +195,16 @@ log "All files downloaded"
 # ---- first run to avoid a license conflict with this repo's MIT license.
 mkdir -p 4play-build
 if [ ! -s 4play-build/page-render.js ]; then
-    log "  downloading 4play page-render.js from git.lolcat.ca (AGPL-3.0)"
-    if ! curl -fsSL "https://git.lolcat.ca/lolcat/4get/raw/branch/master/extra/4play/page-render.js" \
-            -o 4play-build/page-render.js; then
-        err "  Failed to download page-render.js. Check network access to git.lolcat.ca"
+    if [ "$DRY_RUN" = "1" ]; then
+        echo "[dry-run] download page-render.js from git.lolcat.ca -> 4play-build/page-render.js"
+    else
+        log "  downloading 4play page-render.js from git.lolcat.ca (AGPL-3.0)"
+        if ! curl -fsSL "https://git.lolcat.ca/lolcat/4get/raw/branch/master/extra/4play/page-render.js" \
+                -o 4play-build/page-render.js; then
+            err "  Failed to download page-render.js. Check network access to git.lolcat.ca"
+        fi
+        log "  page-render.js downloaded"
     fi
-    log "  page-render.js downloaded"
 else
     log "  4play page-render.js already present"
 fi
@@ -208,7 +249,7 @@ else
     log "searxng-config/settings.yml created with random secret"
 fi
 
-touch searxng-config/limiter.toml
+run touch searxng-config/limiter.toml
 
 # ============================================================
 # STEP 5: Docker network
@@ -219,14 +260,14 @@ step "5/9 Docker network setup"
 docker network inspect proxy-net >/dev/null 2>&1 || docker network create proxy-net >/dev/null
 
 if ! docker network inspect "$DOCKER_NETWORK" >/dev/null 2>&1; then
-    docker network create "$DOCKER_NETWORK"
+    run docker network create "$DOCKER_NETWORK"
     log "Network '$DOCKER_NETWORK' created"
 else
     info "Network '$DOCKER_NETWORK' already exists"
 fi
 
 if ! docker inspect "$OPENWEBUI_CONTAINER" --format '{{json .NetworkSettings.Networks}}' | grep -q "$DOCKER_NETWORK"; then
-    docker network connect "$DOCKER_NETWORK" "$OPENWEBUI_CONTAINER"
+    run docker network connect "$DOCKER_NETWORK" "$OPENWEBUI_CONTAINER"
     log "OpenWebUI connected to '$DOCKER_NETWORK'"
 else
     info "OpenWebUI already connected to '$DOCKER_NETWORK'"
@@ -251,7 +292,7 @@ log "Services: $SERVICE_COUNT"
 # ============================================================
 step "7/9 Building Docker images (5-15 min on first run)"
 
-docker compose build
+run docker compose build
 
 log "All images built"
 
@@ -260,11 +301,13 @@ log "All images built"
 # ============================================================
 step "8/9 Starting containers"
 
-docker compose up -d --remove-orphans
-info "Waiting for services to stabilize (30 seconds)..."
-sleep 30
-log "Containers status:"
-docker compose ps
+run docker compose up -d --remove-orphans
+if [ "$DRY_RUN" != "1" ]; then
+    info "Waiting for services to stabilize (30 seconds)..."
+    sleep 30
+    log "Containers status:"
+    docker compose ps
+fi
 
 # ============================================================
 # STEP 9: Wait for Tor + health checks

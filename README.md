@@ -1219,6 +1219,17 @@ The installer overwrites every file it downloads but preserves `.env` and `searx
 
 ## 📋 Changelog
 
+### v3.6.4 — install.sh --dry-run + backups (2026-10-13)
+
+- `install.sh`: nuovo flag `--dry-run` (e `--help`). Non scrive file, non
+  genera segreti, non esegue comandi docker. Verifica cosa farebbe su una
+  macchina gia' configurata senza toccare nulla.
+- `install.sh`: backup esplicito di `.env` e
+  `searxng-config/settings.yml` come `*.bak.installer` al primo run che
+  li tocca.
+- `.gitignore`: aggiunto `searxng-config/limiter.toml` (file di runtime
+  creato dall'installer, compariva tra gli untracked).
+
 ### v3.6.3 — harden router, reader e supply chain (2026-10-13)
 
 **Router Hermes (`camofox-router`)**

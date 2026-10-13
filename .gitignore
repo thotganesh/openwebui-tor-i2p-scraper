@@ -68,3 +68,4 @@ fourget-data/
 fourget-proxies/
 firefox-4play-data/
 *.bak.*
+searxng-config/limiter.toml
