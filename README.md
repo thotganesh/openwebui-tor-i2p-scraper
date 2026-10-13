@@ -1357,24 +1357,81 @@ SearXNG queries Google, but Google aggressively CAPTCHAs datacenter IPs and bloc
 
 **Containers added:**
 
-| Container | Role | Host port |
+| Container | Role | Host port | Image |
+|---|---|---|---|
+| `fourget` | Search frontend + JSON API | 127.0.0.1:8090 | `luuul/4get:1.0.60` |
+| `fourplay` | WebSocket bridge to Firefox | 127.0.0.1:3030 | built locally from `4play-build/` |
+| `firefox-4play` | Firefox with the 4play extension (VNC) | 127.0.0.1:5900 | `jlesage/firefox:latest` |
+
+**How it works.** `fourget` receives a query, calls `fourplay` over HTTP, and `fourplay` relays it to Firefox over WebSocket. Firefox (already running, with the 4play extension and a warm Google profile) navigates to the search page and returns the rendered results. No headless browser, no API key, no CAPTCHA.
+
+### First-time warm-up (required, ~5 minutes)
+
+Google needs a Firefox profile that has already completed a real search. **Without the warm-up, every query returns a CAPTCHA.** The full procedure is in [`docs/WARMUP-4PLAY.md`](docs/WARMUP-4PLAY.md). Short version:
+
+1. Start the three containers:
+
+        cd ~/ai-stack
+        docker compose up -d fourget fourplay firefox-4play
+
+2. From your local machine, open an SSH tunnel:
+
+        ssh -L 5900:127.0.0.1:5900 root@<your-vps-ip>
+
+3. Connect with a VNC client to `localhost:5900`, password `cnc`.
+4. Inside Firefox: install the **4play** extension from [addons.mozilla.org](https://addons.mozilla.org/firefox/addon/4play/), set **C&C server** to `ws://fourplay:3030/cnc`, click **Connect** (the icon turns green).
+5. Search once on [google.com](https://www.google.com) — solve any CAPTCHA manually.
+6. Close the VNC window. Firefox keeps running inside the container.
+
+The Firefox profile (cookies, history) is stored in `firefox-4play-data/` on the host and survives container restarts. It is **not** committed to git.
+
+### API
+
+    http://fourget:80/api/v1/web?s=<query>&scraper=<engine>
+
+- `s`: query string (URL-encoded)
+- `scraper`: one of `google`, `brave`, `duckduckgo`, `startpage`, `yandex`, `mojeek`, or `auto` (default = multi-engine merge)
+- Response: JSON `{"status":"ok", "web": [{"title":..., "url":..., "description":...}, ...]}`
+
+Test from the VPS:
+
+    docker exec fourget curl -s "http://localhost/api/v1/web?s=docker+networking&scraper=google" | head -c 400
+
+### Client integration
+
+**Open WebUI** — import the tool once:
+
+1. Open **Admin -> Workspace -> Tools -> + New Tool**.
+2. Name: `4get Search`.
+3. Paste the content of [`openwebui-tools/search_4get.py`](openwebui-tools/search_4get.py).
+4. Save. Enable it in any chat via the wrench icon.
+
+The tool exposes a single function `search_4get(query, max_results, engine)` that calls `fourget` and falls back to `searxng` if `fourget` is unreachable.
+
+**Hermes** — the [`fourget_search`](https://github.com/thotganesh/hermes-stealth-stack) plugin registers the same tool on the Hermes side. See the hermes-stealth-stack README for setup.
+
+### Fallback chain
+
+`search_4get` -> `fourget` (Google/Brave/DDG via warm Firefox) -> on failure -> `searxng` -> on failure -> error string. If `fourget` is down but SearXNG is up, the search still returns results (from the metasearch engines).
+
+### Troubleshooting
+
+| Symptom | Cause | Fix |
 |---|---|---|
-| `fourget` | Search frontend + JSON API | 127.0.0.1:8090 |
-| `fourplay` | WebSocket bridge to Firefox | 127.0.0.1:3030 |
-| `firefox-4play` | Firefox with the 4play extension (VNC) | 127.0.0.1:5900 |
+| `fourget` returns `{"status":"ok", "web": []}` (empty) | Firefox profile cold, or 4play not connected | Re-run the warm-up; check the 4play extension icon is green |
+| Every Google query returns a CAPTCHA | Datacenter IP flagged, profile too fresh | Solve one CAPTCHA manually via VNC, then retry -- or use `scraper=brave` |
+| `fourplay` log: `New browser instance connected` never appears | Firefox did not load the extension, or C&C URL wrong | Confirm the URL in the extension is `ws://fourplay:3030/cnc` (not `localhost`) |
+| `docker exec fourget curl http://fourplay:3030/` fails | Containers not on the same network | `docker network inspect ai-net --format '{{range .Containers}}{{.Name}} {{end}}'` -- `fourget`, `fourplay`, `firefox-4play` must all appear |
+| Firefox uses too much RAM | Normal (~400-900 MB) | Set a `mem_limit` on `firefox-4play` in the compose file (already set to 2 GB by default) |
 
-**First-time warm-up (required):** Google needs a Firefox profile that has already completed a real search. Without it, every query gets a CAPTCHA. See [`docs/WARMUP-4PLAY.md`](docs/WARMUP-4PLAY.md) — 5 minutes, once.
+### Rollback
 
-**API:** `http://fourget:80/api/v1/web?s=<query>&scraper=google` (returns JSON). Other engines: `brave`, `duckduckgo`, `startpage`, or `auto`.
+Remove the three services from `docker-compose.yml`, then:
 
-**Client integration:**
+    docker compose down fourget fourplay firefox-4play
+    rm -rf 4play-build/ fourget-data/ fourget-proxies/ firefox-4play-data/
 
-- Open WebUI: tool `search_4get` in [`openwebui-tools/`](openwebui-tools/)
-- Hermes: plugin `fourget_search` in [hermes-stealth-stack](https://github.com/thotganesh/hermes-stealth-stack)
-
-**Fallback chain:** `search_4get` → `fourget` (Google/Brave/DDG via warm Firefox) → on failure → `searxng` → on failure → error.
-
-**Rollback:** remove the three services from `docker-compose.yml`, then `docker compose down fourget fourplay firefox-4play && rm -rf 4play-build/ fourget-data/ fourget-proxies/ firefox-4play-data/`.
+Open WebUI and Hermes keep working; only the `search_4get` tool and `fourget_search` plugin become unavailable (the fallback path returns an error string).
 
 ## 🛡️ Egress guard (recommended)
 
@@ -1431,7 +1488,7 @@ All tools validate URLs before use: `file://`, loopback, private and internal ho
 
 **Snowflake pin.** `tor-snowflake/Dockerfile` builds `snowflake-client` from tag `v2.9.2` (last stable release). Bump `ARG SNOWFLAKE_TAG` deliberately; the image never builds from `HEAD`.
 
-**Known limits.** `browser-clear` runs Chromium with `--no-sandbox` inside the container, which is why the egress guard exists.
+**Known limits.** `browser-clear` runs Chromium with `--no-sandbox` inside the container, which is why the egress guard exists. Redirect chains inside Solverr's own browser are not inspected. A DNS-rebinding window exists between the guard's lookup and the browser's own lookup.
 
 ---
 
@@ -1443,4 +1500,3 @@ All tools validate URLs before use: `file://`, loopback, private and internal ho
 - [Playwright](https://playwright.dev/), [Camoufox](https://camoufox.com/), [Patchright](https://github.com/Kaliiiiiiiiii-Vinyzu/patchright) — browser automation and stealth
 - [Tor Project](https://www.torproject.org/) — Snowflake pluggable transport
 - [i2pd](https://i2pd.website/) — I2P router
- Redirect chains inside Solverr's own browser are not inspected. A DNS-rebinding window exists between the guard's lookup and the browser's own lookup.
