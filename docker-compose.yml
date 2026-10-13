@@ -51,6 +51,8 @@ services:
     ports:
       - "127.0.0.1:8082:8080"
     shm_size: 1gb
+    volumes:
+      - ./shared:/app/shared:ro
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8080/health',timeout=3)"]
       interval: 30s
@@ -76,6 +78,8 @@ services:
     ports:
       - "127.0.0.1:8083:8083"
     shm_size: 1gb
+    volumes:
+      - ./shared:/app/shared:ro
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8083/health',timeout=3)"]
       interval: 30s
@@ -91,6 +95,8 @@ services:
     ports:
       - "127.0.0.1:8084:8084"
     shm_size: 1gb
+    volumes:
+      - ./shared:/app/shared:ro
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8084/health',timeout=3)"]
       interval: 30s
@@ -127,6 +133,8 @@ services:
     ports:
       - "127.0.0.1:8085:8085"
     shm_size: 1gb
+    volumes:
+      - ./shared:/app/shared:ro
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8085/health',timeout=3)"]
       interval: 30s
