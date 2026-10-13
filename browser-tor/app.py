@@ -115,14 +115,22 @@ def _newnym_sync() -> None:
         c.signal(Signal.NEWNYM)
 
 
+_newnym_lock = asyncio.Lock()
+
+
 async def renew_circuit() -> bool:
-    try:
-        await asyncio.to_thread(_newnym_sync)
-        await asyncio.sleep(1)
-        return True
-    except Exception as e:
-        print(f"[warn] NEWNYM failed: {e}")
-        return False
+    # NEWNYM e' globale per tor-proxy: serializza qui per non cambiare i
+    # circuiti sotto altre richieste in corso (incluse quelle di camofox-tor).
+    # Nota: il lock e' locale al container; il vero isolamento lo da' un
+    # tor-proxy dedicato oppure accettare la condivisione documentata.
+    async with _newnym_lock:
+        try:
+            await asyncio.to_thread(_newnym_sync)
+            await asyncio.sleep(1)
+            return True
+        except Exception as e:
+            print(f"[warn] NEWNYM failed: {e}")
+            return False
 
 
 def pulisci_testo(html_content: str) -> str:

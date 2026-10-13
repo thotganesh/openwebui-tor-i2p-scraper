@@ -1,4 +1,4 @@
-FROM python:3.11-slim-bookworm
+FROM python:3.11-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget gnupg ca-certificates \
@@ -10,8 +10,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir \
-    'camoufox[geoip]' \
-    fastapi uvicorn readability-lxml html2text lxml
+    'camoufox[geoip]==0.4.11' \
+    fastapi==0.115.6 \
+    uvicorn==0.34.0 \
+    readability-lxml==0.8.1 \
+    lxml_html_clean==0.4.1 \
+    html2text==2024.2.26 \
+    lxml==5.3.0
 
 RUN python -m camoufox fetch
 

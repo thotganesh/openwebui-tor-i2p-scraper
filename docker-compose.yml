@@ -8,6 +8,7 @@ services:
     command: ["sh", "-c", "exec tor -f /etc/tor/torrc --HashedControlPassword \"$$TOR_CONTROL_HASH\""]
     volumes:
       - ./tor-snowflake/torrc:/etc/tor/torrc:ro
+      - tor-data:/var/lib/tor
     restart: unless-stopped
 
   browser-tor:
@@ -172,3 +173,6 @@ networks:
     external: true
   proxy-net:
     external: true
+
+volumes:
+  tor-data:

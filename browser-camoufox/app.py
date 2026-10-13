@@ -41,6 +41,9 @@ def blocked_reason(url):
         return "schema non consentito"
     if not host or host == "localhost" or host.endswith(_PRIV_SUFFIX):
         return "host non consentito"
+    # .onion/.i2p non sono di competenza del clearnet: rifiuta senza risolvere
+    if host.endswith(".onion") or host.endswith(".i2p"):
+        return "host .onion/.i2p non gestito da questo container"
     try:
         ips = [_ipa.ip_address(host)]
     except ValueError:

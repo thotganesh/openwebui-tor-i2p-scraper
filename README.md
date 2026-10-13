@@ -491,20 +491,14 @@ The hash (`16:...`) goes into `.env` as `TOR_CONTROL_HASH`; the same password in
 
 #### 1.3 torrc — [`tor-snowflake/torrc`](tor-snowflake/torrc)
 
-```ini
-SocksPort 0.0.0.0:9150
-UseBridges 1
-
-ClientTransportPlugin snowflake exec /usr/local/bin/snowflake-client \
-  -url https://snowflake-broker.torproject.net.global.prod.fastly.net/ \
-  -front cdn.sstatic.net \
-  -ice stun:stun.l.google.com:19302,stun:stun.antisip.com:3478,stun:stun.bluesip.net:3478,stun:stun.dus.net:3478,stun:stun.epygi.com:3478,stun:stun.sonetel.com:3478,stun:stun.uls.co.za:3478,stun:stun.voipgate.com:3478,stun:stun.voys.nl:3478
-
-Bridge snowflake 192.0.2.3:80 2B280B23E1107BB62ABFC40DDCC8824814F80A72 fingerprint=2B280B23E1107BB62ABFC40DDCC8824814F80A72 url=https://snowflake-broker.torproject.net.global.prod.fastly.net/ fronts=foursquare.com,github.githubassets.com ice=stun:stun.l.google.com:19302,stun:stun.antisip.com:3478,stun:stun.bluesip.net:3478,stun:stun.dus.net:3478,stun:stun.epygi.com:3478,stun:stun.sonetel.com:3478,stun:stun.uls.co.za:3478,stun:stun.voipgate.com:3478,stun:stun.voys.nl:3478 utls-imitate=hellorandomizedalpn
-
-ControlPort 0.0.0.0:9151
-# HashedControlPassword is now injected via docker-compose and .env
-```
+> [!WARNING]
+> **Snippet rimosso — file reale nel repo.**
+> La configurazione del torrc è cambiata più volte (bridge Snowflake, front,
+> ICE server). Per evitare copie stantie, qui c'è solo il link al file reale:
+> [`tor-snowflake/torrc`](tor-snowflake/torrc).
+> Il container `tor-proxy` monta quel file in `/etc/tor/torrc` (read-only) e
+> inietta la password del ControlPort via `--HashedControlPassword` dalla
+> variabile `TOR_CONTROL_HASH` in `.env`.
 
 > [!WARNING]
 > The `-ice` and `Bridge` lines are **one logical line each**. The IP `192.0.2.3` in the `Bridge` line is a documentation placeholder: with Snowflake the client reaches the broker through domain fronting and then negotiates with a volunteer proxy via WebRTC.
@@ -680,16 +674,16 @@ The router itself is the stock `purplei2p/i2pd:latest` image (see [section 8](#8
 
 Solverr is an improved fork of FlareSolverr that uses two browsers (Chromium + Camoufox) and answers the FlareSolverr-compatible API on port 8191.
 
-```yaml
-solverr:
-  image: ghcr.io/unseensnick/solverr:latest
-  container_name: solverr
-  networks: [ai-net]
-  ports:
-    - "127.0.0.1:8191:8191"
-  shm_size: 512mb
-  restart: unless-stopped
-```
+> [!WARNING]
+> **Snippet rimosso — file reale nel repo.**
+> Il compose è cambiato: `tor-proxy` e `i2p-proxy` vivono su una rete isolata
+> (`proxy-net`), e solo i consumer (`browser-tor`, `browser-i2p`) sono su
+> entrambe le reti `ai-net` e `proxy-net`. Per evitare copie stantie, qui c'è
+> solo il link al file reale: [`docker-compose.yml`](docker-compose.yml).
+>
+> Il compose reale monta anche un volume nominato `tor-data` su
+> `/var/lib/tor`, così il bootstrap di Tor sopravvive alla ricreazione del
+> container.
 
 **Why it's needed:** a stealth browser alone does not always pass Cloudflare Turnstile or "Just a moment" pages. `browser-clear` hands such requests to Solverr and uses the returned HTML. (`browser-camoufox` does **not** call Solverr; it relies on its engine-level stealth.)
 
@@ -1225,6 +1219,37 @@ The installer overwrites every file it downloads but preserves `.env` and `searx
 
 ## 📋 Changelog
 
+### v3.6.3 — harden router, reader e supply chain (2026-10-13)
+
+**Router Hermes (`camofox-router`)**
+- SSRF: `_check_url` risolve l'hostname per il backend clearnet e rifiuta
+  loopback, RFC1918, link-local, CGNAT, multicast, reserved, `.local`/`.internal`,
+  hostname senza punto, host numerici ambigui.
+- Fail-closed: prefissi anonimi (`tor+`/`i2p+`) senza URL → `400 url_rejected`;
+  `.onion`/`.i2p` accettati solo sul backend corrispondente; `userinfo` rifiutato.
+- I backend anonimi non risolvono l'hostname (nessun leak DNS).
+
+**Reader (`browser-*`)**
+- `browser-i2p`: niente `socket.getaddrinfo()` per `.i2p`/`.onion`.
+- `browser-clear`/`browser-camoufox`/`browser-http`: rifiutano `.onion`/`.i2p`
+  senza risolverli.
+
+**Build e supply chain**
+- Pin espliciti di pip in tutti i Dockerfile (`fastapi==0.115.6`,
+  `uvicorn==0.34.0`, `httpx==0.28.1`, `readability-lxml==0.8.1`,
+  `lxml_html_clean==0.4.1`, `html2text==2024.2.26`, `lxml==5.3.0`).
+- Aggiunto `lxml_html_clean` (richiesto da `readability-lxml` da lxml 5.x).
+- `browser-i2p`: Playwright allineato a v1.48.0 (era v1.40.0).
+- Volume nominato `tor-data:/var/lib/tor` per non rifare il bootstrap a ogni
+  ricreazione del container.
+- `install.sh`: sostituito `chmod -R 777 i2p-data` con `chown 100:65533` +
+  `chmod 750`.
+
+**Documentazione**
+- Rimossi gli snippet stantii di `torrc` e `docker-compose.yml` (ora link ai
+  file reali nel repo).
+- Nuova sottosezione "Router Hermes" in Security hardening.
+
 ### v3.6.1 — expanded 4get documentation
 
 - README: expanded the "Google search via 4get" section with warm-up steps, API reference, client integration (Open WebUI + Hermes), fallback chain, troubleshooting table, and rollback procedure
@@ -1517,6 +1542,32 @@ All tools validate URLs before use: `file://`, loopback, private and internal ho
 ---
 
 ## 🔒 Security hardening
+
+### Router Hermes (hermes-stealth-stack)
+
+Il router `camofox-router` applica un controllo URL *fail-closed*:
+
+- **Backend clearnet (`vps`).** Risolve l'hostname con `socket.getaddrinfo()`,
+  controlla **tutti** i record A/AAAA e rifiuta loopback, RFC1918, link-local,
+  CGNAT, multicast, reserved, `.local`/`.internal`/`.lan`/`.docker`/`.svc`,
+  hostname senza punto, e host numerici ambigui. Rifiuta anche userinfo
+  (`http://a@b/`).
+- **Backend anonimi (`tor`, `i2p`).** Non risolve l'hostname in locale
+  (perderebbe DNS/anonimato): controlla solo IP letterali privati, `.onion` e
+  `.i2p`, e richiede che il prefisso corrisponda al backend corretto
+  (`tor+` con `.onion`, `i2p+` con `.i2p`). Un prefisso `tor+` senza URL
+  restituisce `400 url_rejected` invece di creare un tab vuoto.
+- **Nessun fallback silenzioso.** Un prefisso sconosciuto (`foo+http://...`)
+  viene rifiutato con `schema non consentito`. `DEFAULT_BACKEND` si applica
+  solo a URL `http/https` senza prefisso.
+
+I reader (`browser-clear`, `browser-camoufox`, `browser-http`, `browser-i2p`)
+applicano un guard DNS equivalente. `browser-i2p` **non** risolve `.i2p` /
+`.onion` via DNS di sistema; i reader clearnet rifiutano `.onion`/`.i2p`
+senza risolverli.
+
+### Concurrency
+
 
 **SSRF guard.** `browser-http`, `browser-clear` and `browser-camoufox` refuse any URL that resolves to a non-public address (loopback, RFC1918, link-local, CGNAT, Docker/internal hostnames, numeric tricks such as `127.1`, trailing dots). The check covers the initial URL (HTTP 400 with the reason), every redirect hop and every sub-request made by the page (the page is then discarded with an error message). `browser-tor` and `browser-i2p` do not need it: their exit is the anonymity network.
 

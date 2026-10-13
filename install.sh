@@ -93,7 +93,10 @@ step "2/9 Creating directories"
 
 mkdir -p "$STACK_DIR"/{tor-snowflake,browser-tor,browser-clear,browser-camoufox,browser-http,browser-i2p,searxng-config,openwebui-tools,i2p-data}
 cd "$STACK_DIR"
-chmod -R 777 i2p-data
+# i2pd gira come UID 100 / GID 65533 nell'immagine. Dai solo i permessi
+# necessari (750) invece di 777.
+chown -R 100:65533 i2p-data 2>/dev/null || true
+chmod -R 750 i2p-data
 log "Created $STACK_DIR with subdirectories"
 
 # ============================================================

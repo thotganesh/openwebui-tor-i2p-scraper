@@ -45,6 +45,9 @@ def blocked_reason(url):
         return "schema non consentito"
     if not host or host == "localhost" or host.endswith(_PRIV_SUFFIX):
         return "host non consentito"
+    # .i2p/.onion: NON risolvere via DNS locale (leak del nome al resolver)
+    if host.endswith(".i2p") or host.endswith(".onion"):
+        return None
     try:
         ips = [_ipa.ip_address(host)]
     except ValueError:
