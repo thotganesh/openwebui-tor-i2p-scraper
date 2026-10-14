@@ -265,6 +265,12 @@ EOF
     log ".env created with random Tor credentials"
 fi
 
+# VNC_PASSWORD (firefox-4play): generata se manca, anche su .env esistenti
+if [ "$DRY_RUN" != "1" ] && [ -f .env ] && ! grep -q '^VNC_PASSWORD=' .env; then
+    printf 'VNC_PASSWORD=%s\n' "$(openssl rand -base64 18 | tr -d '/+=' | head -c 20)" >> .env
+    log "VNC_PASSWORD generata in .env"
+fi
+
 if [ -f searxng-config/settings.yml ]; then
     info "searxng-config/settings.yml already exists, skipping"
 else
