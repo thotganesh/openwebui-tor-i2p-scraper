@@ -1,3 +1,4 @@
+DataDirectory /var/lib/tor
 SocksPort 0.0.0.0:9150
 ControlPort 0.0.0.0:9151
 # HashedControlPassword is injected via docker-compose and .env

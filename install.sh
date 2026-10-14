@@ -290,6 +290,7 @@ step "5/9 Docker network setup"
 
 # Isolated network for tor-proxy / i2p-proxy (see docker-compose.yml)
 docker network inspect proxy-net >/dev/null 2>&1 || docker network create proxy-net >/dev/null
+docker network inspect fourplay-net >/dev/null 2>&1 || docker network create fourplay-net >/dev/null
 
 if ! docker network inspect "$DOCKER_NETWORK" >/dev/null 2>&1; then
     run docker network create "$DOCKER_NETWORK"

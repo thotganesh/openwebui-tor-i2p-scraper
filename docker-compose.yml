@@ -165,7 +165,7 @@ services:
     build: ./4play-build
     image: local/4get-4play:latest
     container_name: fourplay
-    networks: [ai-net]
+    networks: [ai-net, fourplay-net]
     environment:
       - FOURPLAY_PORT=3030
       - FOURPLAY_PASSWORD=cnc
@@ -177,7 +177,9 @@ services:
   firefox-4play:
     image: jlesage/firefox:latest
     container_name: firefox-4play
-    networks: [ai-net]
+    # Isolato su fourplay-net: raggiunge fourplay:3030 ma non vede
+    # gli altri container di ai-net (hermes, open-webui, browser-*, tor-proxy).
+    networks: [fourplay-net]
     environment:
       - DISPLAY_WIDTH=1920
       - DISPLAY_HEIGHT=1080
@@ -195,6 +197,9 @@ networks:
   ai-net:
     external: true
   proxy-net:
+    external: true
+  fourplay-net:
+    name: fourplay-net
     external: true
 
 volumes:
