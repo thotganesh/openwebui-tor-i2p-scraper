@@ -122,7 +122,7 @@ log "Disk space: ${AVAIL_GB}GB available (need ~35GB for the first install)"
 # ============================================================
 step "2/9 Creating directories"
 
-run mkdir -p "$STACK_DIR"/{tor-snowflake,browser-tor,browser-clear,browser-camoufox,browser-http,browser-i2p,searxng-config,openwebui-tools,i2p-data}
+run mkdir -p "$STACK_DIR"/{tor-snowflake,browser-tor,browser-clear,browser-camoufox,browser-http,browser-i2p,searxng-config,openwebui-tools,i2p-data,shared,scripts,4play-build,fourget-data,fourget-proxies,firefox-4play-data}
 cd "$STACK_DIR"
 if [ "$DRY_RUN" != "1" ]; then
   # i2pd gira come UID 100 / GID 65533 nell'immagine. Dai solo i permessi
@@ -188,6 +188,15 @@ download "searxng-config/settings.yml.example" "searxng-config/settings.yml.exam
 download "openwebui-tools/web_tool.py"     "openwebui-tools/web_tool.py"
 download "openwebui-tools/darknet_tool.py" "openwebui-tools/darknet_tool.py"
 
+# shared SSRF guard + 4play build context (page-render.js e' AGPL: scaricato a parte)
+download "4play-build/Dockerfile" "4play-build/Dockerfile"
+download "4play-build/README.md" "4play-build/README.md"
+download "4play-build/package-lock.json" "4play-build/package-lock.json"
+download "4play-build/package.json" "4play-build/package.json"
+download "scripts/patch-4play-guard.py" "scripts/patch-4play-guard.py"
+download "shared/__init__.py" "shared/__init__.py"
+download "shared/ssrf_guard.py" "shared/ssrf_guard.py"
+
 log "All files downloaded"
 
 # ---- 4play-build: Dockerfile + package.json are MIT and live in the repo.
@@ -207,6 +216,23 @@ if [ ! -s 4play-build/page-render.js ]; then
     fi
 else
     log "  4play page-render.js already present"
+fi
+
+# ---- 4play: verifica integrita' + guard SSRF (idempotente)
+PAGE_RENDER_SHA256="4b34756fc4a13e765c3571dcf7c7d29a8b8cd67a54295aa583a26a9d9e3c5b0a"
+if [ "$DRY_RUN" = "1" ]; then
+    echo "[dry-run] verify sha256 + apply scripts/patch-4play-guard.py"
+elif [ -s 4play-build/page-render.js ] && ! grep -q "function url_blocked" 4play-build/page-render.js; then
+    GOT="$(sha256sum 4play-build/page-render.js | cut -d' ' -f1)"
+    if [ "$GOT" != "$PAGE_RENDER_SHA256" ] && [ "${ALLOW_UNPINNED_4PLAY:-0}" != "1" ]; then
+        err "page-render.js upstream diverso dalla versione verificata (sha256 $GOT)."
+        err "Controlla il diff upstream, poi rilancia con ALLOW_UNPINNED_4PLAY=1."
+        mv 4play-build/page-render.js 4play-build/page-render.js.bak-rejected
+        exit 1
+    fi
+    python3 scripts/patch-4play-guard.py 4play-build/page-render.js \
+        || { err "guard SSRF non applicato"; mv 4play-build/page-render.js 4play-build/page-render.js.bak-rejected; exit 1; }
+    log "  4play: guard SSRF applicato"
 fi
 
 # ============================================================

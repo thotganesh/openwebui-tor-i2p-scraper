@@ -6,6 +6,7 @@
   "type": "commonjs",
   "main": "page-render.js",
   "dependencies": {
-    "ws": "^8.21.2"
+    "ws": "^8.21.2",
+    "@lawlers/4play": "1.2.5"
   }
 }
