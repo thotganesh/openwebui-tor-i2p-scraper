@@ -2,7 +2,9 @@
 
 # 🕵️‍♂️ Open WebUI Tor, I2P & Stealth Web Scraper 🕷️
 
-**v3.6.10 — A robust, multi-path web scraping infrastructure for local AI models.**
+![Version](https://img.shields.io/github/v/tag/thotganesh/openwebui-tor-i2p-scraper?label=version&sort=semver&color=blue)
+
+**A robust, multi-path web scraping infrastructure for local AI models.**
 
 A full-stack Docker solution that feeds clean, optimized Markdown to your local LLM — saving RAM, cutting token usage, bypassing anti-bot measures and cookie walls, and keeping your OpSec intact across **Clearnet, Tor (.onion), I2P (.i2p) and anonymous search**.
 
