@@ -454,7 +454,7 @@ Then install the two tools (see [How to install](#-how-to-install)) and run the 
 ```bash
 mkdir -p ~/ai-stack/{tor-snowflake,browser-tor,browser-clear,browser-camoufox,browser-http,browser-i2p,searxng-config,openwebui-tools,i2p-data}
 # VITAL: i2pd runs as non-root and needs permission to write its addressbook
-chmod -R 777 ~/ai-stack/i2p-data
+chown -R 100:65533 ~/ai-stack/i2p-data && chmod -R 750 ~/ai-stack/i2p-data
 cd ~/ai-stack
 ```
 
