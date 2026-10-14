@@ -15,7 +15,7 @@ _SEM = _aio.Semaphore(int(_os.environ.get("MAX_CONCURRENT", "2")))
 # Solo host .i2p sono accettati; nessuna risoluzione DNS.
 from shared.ssrf_guard import (
     blocked_reason_anon,
-    check_redirect_chain_clearnet,
+    check_redirect_chain_anon,
 )
 
 
@@ -47,7 +47,7 @@ async def chain_check(resp, page):
         urls.append(r.url)
         r = r.redirected_from
     urls.append(page.url)
-    why = check_redirect_chain_clearnet(urls)
+    why = check_redirect_chain_anon(urls, ".i2p")
     if why:
         raise RuntimeError("redirect/URL bloccato: " + why)
 

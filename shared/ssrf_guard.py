@@ -32,6 +32,7 @@ __all__ = [
     "blocked_reason_clearnet",
     "blocked_reason_anon",
     "check_redirect_chain_clearnet",
+    "check_redirect_chain_anon",
 ]
 
 # ---- shared constants --------------------------------------------------
@@ -168,6 +169,16 @@ def check_redirect_chain_clearnet(urls):
     """Return a reason string if any URL in the chain is blocked, else None."""
     for u in urls:
         why = blocked_reason_clearnet(u)
+        if why:
+            return f"{why}: {u[:120]}"
+    return None
+
+
+def check_redirect_chain_anon(urls, allow_suffix):
+    """Like check_redirect_chain_clearnet, for anonymity networks:
+    no DNS resolution, every URL must end with ``allow_suffix``."""
+    for u in urls:
+        why = blocked_reason_anon(u, allow_suffix)
         if why:
             return f"{why}: {u[:120]}"
     return None
