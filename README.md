@@ -2,7 +2,7 @@
 
 # 🕵️‍♂️ Open WebUI Tor, I2P & Stealth Web Scraper 🕷️
 
-**v3.6.1 — A robust, multi-path web scraping infrastructure for local AI models.**
+**v3.6.8 — A robust, multi-path web scraping infrastructure for local AI models.**
 
 A full-stack Docker solution that feeds clean, optimized Markdown to your local LLM — saving RAM, cutting token usage, bypassing anti-bot measures and cookie walls, and keeping your OpSec intact across **Clearnet, Tor (.onion), I2P (.i2p) and anonymous search**.
 
@@ -33,7 +33,7 @@ Built specifically as tools for **Open WebUI**.
 curl -fsSL https://raw.githubusercontent.com/thotganesh/openwebui-tor-i2p-scraper/main/install.sh -o install.sh && bash install.sh
 ```
 
-**What you get**: 9 Docker containers (HTTP reader, Patchright Chromium, Camoufox Firefox, Tor+Snowflake, I2P+i2pd, Solverr, SearXNG) and 2 Open WebUI tools (`Web` and `Darknet`).
+**What you get**: 13 Docker containers (HTTP reader, Patchright Chromium, Camoufox Firefox, two Tor+Snowflake clients, I2P+i2pd, Solverr, SearXNG, 4get + 4play + Firefox for Google search) and 2 Open WebUI tools (`Web` and `Darknet`).
 
 **Read more**: scroll down for architecture, the full tutorial, the test battery, and troubleshooting. This README is long because the stack is complex — the [Table of Contents](#-table-of-contents) helps you navigate.
 
@@ -150,7 +150,7 @@ curl -fsSL https://raw.githubusercontent.com/thotganesh/openwebui-tor-i2p-scrape
 | Area | Change | Why it matters |
 |---|---|---|
 | **Clearnet reader** | New **3-tier fallback**: `browser-http` → `browser-clear` (Patchright) → `browser-camoufox` (Camoufox) | Each tier is slower but stronger; the cheapest tier that returns usable content wins |
-| **New container** | `browser-camoufox` (Camoufox, a Firefox patched at C++ level), port `8085` | Defeats fingerprinting that JavaScript-level stealth patches cannot hide; now **9 containers** |
+| **New container** | `browser-camoufox` (Camoufox, a Firefox patched at C++ level), port `8085` | Defeats fingerprinting that JavaScript-level stealth patches cannot hide; now **13 containers** |
 | **browser-clear** | `playwright-stealth` replaced by **Patchright** (`patchright==1.48.0.post0`, stealth Chromium) | Stealth is applied at the driver level, no JS monkey-patching to detect |
 | **Result selection** | `read_web_full` returns the **longest** text between tier 2 and tier 3 | Avoids returning a cookie banner when a better extraction exists |
 | **Iubenda fix** | Camoufox cookie killer removes the `is-iubenda-cs-banner-open` class and forces `opacity` / `visibility` on `<body>` | `repubblica.it`: 368 → 101,676 chars |
@@ -346,7 +346,7 @@ docker network create proxy-net   # isolated network for tor-proxy / i2p-proxy
 docker network connect ai-net open-webui
 
 # 3) I2P data folder: i2pd runs as non-root and needs write access
-mkdir -p i2p-data && chmod -R 777 i2p-data
+mkdir -p i2p-data && chown -R 100:65533 i2p-data && chmod -R 750 i2p-data
 
 # 4) Secrets: copy .env.example to .env, set a password and its hash
 cp .env.example .env
@@ -358,7 +358,7 @@ docker run --rm debian:bookworm-slim bash -c \
 cp searxng-config/settings.yml.example searxng-config/settings.yml
 sed -i "s/CHANGE_ME_generate_with_openssl_rand_hex_32/$(openssl rand -hex 32)/" searxng-config/settings.yml
 
-# 6) Build and start all 9 containers
+# 6) Build and start all 13 containers
 docker compose up -d --build
 
 # 7) Wait for Tor: look for "Bootstrapped 100% (done)"
@@ -395,7 +395,7 @@ Then install the two tools (see [How to install](#-how-to-install)) and run the 
 - 📡 **Outgoing UDP open**: Snowflake negotiates via WebRTC/ICE (UDP). If the provider blocks it, Tor stays stuck in bootstrap
 - 🔗 A Docker network shared with OpenWebUI, here called `ai-net`: `docker network create ai-net`
 - 🔌 Free host ports: `8081` (browser-tor), `8082` (browser-clear), `8083` (browser-i2p), `8084` (browser-http), `8085` (browser-camoufox), `8191` (solverr), `8888` (searxng)
-- 💾 About **35 GB of free disk space** during the first install. Breakdown: ~14 GB Docker images (the 9 containers), ~12 GB Docker build cache (reclaimable), ~6.5 GB OpenWebUI if on the same host. After `docker builder prune -f` you free ~12 GB.
+- 💾 About **35 GB of free disk space** during the first install. Breakdown: ~14 GB Docker images (the 13 containers), ~12 GB Docker build cache (reclaimable), ~6.5 GB OpenWebUI if on the same host. After `docker builder prune -f` you free ~12 GB.
 - 🤖 OpenWebUI already running and connected to `ai-net`
 
 ### Folder structure
@@ -432,8 +432,23 @@ Then install the two tools (see [How to install](#-how-to-install)) and run the 
 │   └── settings.yml.example
 ├── openwebui-tools/
 │   ├── web_tool.py
-│   └── darknet_tool.py
-└── i2p-data/
+│   ├── darknet_tool.py
+│   └── search_4get.py
+├── shared/
+│   └── ssrf_guard.py
+├── tests/
+│   └── test_ssrf_guard.py
+├── scripts/
+│   └── egress-guard.sh
+├── 4play-build/
+│   ├── Dockerfile
+│   └── package.json
+├── .github/
+│   └── workflows/ci.yml
+├── i2p-data/
+├── fourget-data/
+├── fourget-proxies/
+└── firefox-4play-data/
 ```
 
 ```bash
@@ -643,7 +658,7 @@ Dependencies ([`browser-http/requirements.txt`](browser-http/requirements.txt)):
 📁 [`browser-i2p/`](browser-i2p/) — port `8083`
 
 ```dockerfile
-FROM mcr.microsoft.com/playwright/python:v1.40.0-jammy
+FROM mcr.microsoft.com/playwright/python:v1.48.0-jammy
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
@@ -673,17 +688,6 @@ The router itself is the stock `purplei2p/i2pd:latest` image (see [section 8](#8
 ### 6. solverr: Cloudflare/Turnstile solver
 
 Solverr is an improved fork of FlareSolverr that uses two browsers (Chromium + Camoufox) and answers the FlareSolverr-compatible API on port 8191.
-
-> [!WARNING]
-> **Snippet rimosso — file reale nel repo.**
-> Il compose è cambiato: `tor-proxy` e `i2p-proxy` vivono su una rete isolata
-> (`proxy-net`), e solo i consumer (`browser-tor`, `browser-i2p`) sono su
-> entrambe le reti `ai-net` e `proxy-net`. Per evitare copie stantie, qui c'è
-> solo il link al file reale: [`docker-compose.yml`](docker-compose.yml).
->
-> Il compose reale monta anche un volume nominato `tor-data` su
-> `/var/lib/tor`, così il bootstrap di Tor sopravvive alla ricreazione del
-> container.
 
 **Why it's needed:** a stealth browser alone does not always pass Cloudflare Turnstile or "Just a moment" pages. `browser-clear` hands such requests to Solverr and uses the returned HTML. (`browser-camoufox` does **not** call Solverr; it relies on its engine-level stealth.)
 
@@ -733,97 +737,22 @@ sed -i "s/CHANGE_ME_generate_with_openssl_rand_hex_32/$(openssl rand -hex 32)/" 
 
 📄 [`docker-compose.yml`](docker-compose.yml)
 
-```yaml
-services:
-  tor-proxy:
-    build: ./tor-snowflake
-    container_name: tor-proxy
-    networks: [ai-net]
-    environment:
-      - TOR_CONTROL_HASH=${TOR_CONTROL_HASH:?Set TOR_CONTROL_HASH in .env}
-    command: ["sh", "-c", "exec tor -f /etc/tor/torrc --HashedControlPassword \"$$TOR_CONTROL_HASH\""]
-    volumes:
-      - ./tor-snowflake/torrc:/etc/tor/torrc:ro
-    restart: unless-stopped
-
-  browser-tor:
-    build: ./browser-tor
-    container_name: browser-tor
-    networks: [ai-net]
-    environment:
-      - TOR_CONTROL_PASSWORD=${TOR_CONTROL_PASSWORD:?Set TOR_CONTROL_PASSWORD in .env}
-    depends_on: [tor-proxy]
-    ports:
-      - "127.0.0.1:8081:8081"
-    restart: unless-stopped
-
-  browser-clear:
-    build: ./browser-clear
-    container_name: browser-clear
-    networks: [ai-net]
-    ports:
-      - "127.0.0.1:8082:8080"
-    restart: unless-stopped
-
-  i2p-proxy:
-    image: purplei2p/i2pd:latest
-    container_name: i2p-proxy
-    networks: [ai-net]
-    command: --httpproxy.address=0.0.0.0 --socksproxy.address=0.0.0.0
-    restart: unless-stopped
-    volumes:
-      - ./i2p-data:/home/i2pd/data
-
-  browser-i2p:
-    build: ./browser-i2p
-    container_name: browser-i2p
-    networks: [ai-net]
-    depends_on: [i2p-proxy]
-    ports:
-      - "127.0.0.1:8083:8083"
-    restart: unless-stopped
- 
-  browser-http:
-    build: ./browser-http
-    container_name: browser-http
-    networks: [ai-net]
-    ports:
-      - "127.0.0.1:8084:8084"
-    restart: unless-stopped
-
-  solverr:
-    image: ghcr.io/unseensnick/solverr:latest
-    container_name: solverr
-    networks: [ai-net]
-    ports:
-      - "127.0.0.1:8191:8191"
-    shm_size: 512mb
-    restart: unless-stopped
-  
-  searxng:
-    image: searxng/searxng:latest
-    container_name: searxng
-    networks: [ai-net]
-    ports:
-      - "127.0.0.1:8888:8080"
-    volumes:
-      - ./searxng-config:/etc/searxng:rw
-    environment:
-      - SEARXNG_BASE_URL=http://searxng:8080/
-    restart: unless-stopped
-
-  browser-camoufox:
-    build: ./browser-camoufox
-    container_name: browser-camoufox
-    networks: [ai-net]
-    ports:
-      - "127.0.0.1:8085:8085"
-    restart: unless-stopped
-
-networks:
-  ai-net:
-    external: true
-```
+> [!WARNING]
+> **Snippet rimosso — file reale nel repo.**
+> Il compose è cambiato più volte (reti `proxy-net`/`fourplay-net`, secondo
+> client Tor `tor-proxy-camofox`, volume `tor-data`, container 4get). Per
+> evitare copie stantie, qui c'è solo il link al file reale:
+> [`docker-compose.yml`](docker-compose.yml).
+>
+> Punti chiave da sapere:
+> - `tor-proxy` e `i2p-proxy` vivono su `proxy-net`; `browser-tor` e
+>   `browser-i2p` sono su `ai-net` + `proxy-net`.
+> - `tor-proxy-camofox` è il secondo client Tor con circuiti indipendenti
+>   (usato da `camofox-tor` in hermes-stealth-stack).
+> - Il volume `tor-data` monta `/var/lib/tor`, così il bootstrap Snowflake
+>   sopravvive alla ricreazione del container.
+> - `fourget`/`fourplay` sono su `ai-net`; `firefox-4play` è isolato su
+>   `fourplay-net`, per non vedere gli altri container.
 
 > [!IMPORTANT]
 > `ai-net` is `external: true`: the network must already exist and be shared with OpenWebUI. Ports are bound to `127.0.0.1`: **never publish Tor's 9150/9151, I2P's 4444/4447, Solverr's 8191 or SearXNG's 8888 to the internet**.
@@ -1126,7 +1055,7 @@ Mechanisms present across the services:
 | Camoufox build fails at `camoufox fetch` | No outbound access to GitHub releases during build | Allow outbound HTTPS on the build host and rebuild: `docker compose build browser-camoufox` |
 | `browser-camoufox` returns `error` with a long Playwright trace | Page crashed or navigation timed out (60 s) | Retry; try with `block_media: true` |
 | Solverr `Challenge not solved` | VPS IP is blocked by Cloudflare | Residential proxy (future enhancement) or rely on tier 3 |
-| I2P container `Restarting (139)` | Permission denied on `/home/i2pd/data` | `chmod -R 777 i2p-data` |
+| I2P container `Restarting (139)` | Permission denied on `/home/i2pd/data` | `chown -R 100:65533 i2p-data && chmod -R 750 i2p-data` (i2pd runs as UID 100 in the image) |
 | I2P `NS_ERROR_UNKNOWN_PROXY_HOST` | `i2p-proxy` is down or unreachable | Check permissions on `i2p-data`, then `docker compose restart i2p-proxy` |
 | I2P `Host not found in addressbook` / `I2P Network Error` | Router still warming up, or eepsite offline | Wait ~5 minutes, test `http://stats.i2p`; retry later |
 | `search_i2p` empty | Legwork is itself an eepsite and can be offline | Retry later; read a known eepsite with `read_i2p` |
@@ -1218,6 +1147,46 @@ The script:
 The installer overwrites every file it downloads but preserves `.env` and `searxng-config/settings.yml`. Starting from v3.5.2, the file being replaced is also saved as `<file>.pre-install` the first time, so local edits can be recovered.
 
 ## 📋 Changelog
+
+### v3.6.8 — Tor DataDirectory + fourplay network isolation (2026-10-14)
+
+- `tor-snowflake/torrc`: aggiunto `DataDirectory /var/lib/tor`. Tor girava
+  da root scrivendo in `/root/.tor`, lasciando il volume `tor-data` vuoto:
+  ogni restart rifaceva il bootstrap Snowflake da zero (90-140s). Ora il
+  volume è persistente.
+- `docker-compose.yml`: nuova rete `fourplay-net`. `fourplay` è su
+  `ai-net`+`fourplay-net`, `firefox-4play` **solo** su `fourplay-net`.
+  Il browser VNC raggiunge `fourplay:3030` ma non vede `hermes`,
+  `open-webui`, `browser-*`, `tor-proxy`.
+- `install.sh`: crea anche `fourplay-net`.
+
+### v3.6.7 — Snowflake domain fronting allineato a Tor Browser (2026-10-14)
+
+- `tor-snowflake/torrc`: i quattro `Bridge snowflake` usavano
+  `fronts=app.datapacket.com,www.datapacket.com`, che non sono nella
+  configurazione ufficiale attuale. Allineati a
+  `fronts=www.cdn77.com,www.phpmyadmin.net` (CDN77 front, come da
+  `pt_config.json` di tor-browser-build).
+
+### v3.6.6 — shared/ssrf_guard.py + unit tests + CI (2026-10-14)
+
+- Nuovo modulo `shared/ssrf_guard.py` (nessuna dipendenza esterna).
+  La logica SSRF non è più duplicata nei quattro reader.
+- API: `blocked_reason_clearnet`, `blocked_reason_anon`,
+  `check_redirect_chain_clearnet`, `check_redirect_chain_anon`.
+- `tests/test_ssrf_guard.py` (32 casi) + nuovo job CI
+  `ssrf-guard-tests`.
+- `browser-i2p`: fix — usava `check_redirect_chain_clearnet` che rifiuta
+  ogni URL `.i2p`; ora usa `check_redirect_chain_anon(urls, ".i2p")`.
+- `browser-i2p`: rimosso `socket.getaddrinfo` sui `.i2p`/`.onion`.
+
+### v3.6.5 — tor-proxy-camofox (circuiti Tor separati) (2026-10-14)
+
+- Nuovo servizio `tor-proxy-camofox`: secondo client Tor con volume
+  `tor-data-camofox` proprio. Usato da `camofox-tor`
+  (hermes-stealth-stack) per separare i circuiti da `browser-tor`.
+  Verificato: dopo un `NEWNYM` su `browser-tor` (IP cambiato), `camofox-tor`
+  mantiene lo stesso IP di uscita.
 
 ### v3.6.4 — install.sh --dry-run + backups (2026-10-13)
 
@@ -1345,7 +1314,7 @@ The installer overwrites every file it downloads but preserves `.env` and `searx
 
 ### v3.1 — Stealth tiers, Ahmia fix, installer
 
-- Added **`browser-camoufox`** (Camoufox, engine-level stealth Firefox) as clearnet **tier 3**; stack grows to **9 containers**
+- Added **`browser-camoufox`** (Camoufox, engine-level stealth Firefox) as clearnet **tier 3**; stack grows to **13 containers**
 - **`browser-clear`** now uses **Patchright** (`patchright==1.48.0.post0`) instead of `playwright-stealth`
 - **`read_web_full`** runs tier 2 then tier 3 and returns the **longest** result; `read_web` escalates from tier 1 on error or < 200 chars
 - Fixed **Iubenda** on `repubblica.it`: strip `is-iubenda-cs-banner-open` and force `opacity` / `visibility` (368 → 101,676 chars)
