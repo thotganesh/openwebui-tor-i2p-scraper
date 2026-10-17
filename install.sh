@@ -122,7 +122,7 @@ log "Disk space: ${AVAIL_GB}GB available (need ~35GB for the first install)"
 # ============================================================
 step "2/9 Creating directories"
 
-run mkdir -p "$STACK_DIR"/{tor-snowflake,browser-tor,browser-clear,browser-camoufox,browser-http,browser-i2p,searxng-config,openwebui-tools,i2p-data,shared,scripts,4play-build,fourget-data,fourget-proxies,firefox-4play-data}
+run mkdir -p "$STACK_DIR"/{tor-snowflake,browser-tor,browser-tor-real,browser-tor-interactive,browser-clear,browser-camoufox,browser-http,browser-i2p,searxng-config,openwebui-tools,i2p-data,shared,scripts,4play-build,fourget-data,fourget-proxies,firefox-4play-data}
 cd "$STACK_DIR"
 if [ "$DRY_RUN" != "1" ]; then
   # i2pd gira come UID 100 / GID 65533 nell'immagine. Dai solo i permessi
@@ -168,6 +168,18 @@ download "tor-snowflake/torrc"         "tor-snowflake/torrc"
 
 download "browser-tor/Dockerfile"      "browser-tor/Dockerfile"
 download "browser-tor/app.py"          "browser-tor/app.py"
+
+# Tor Browser ufficiale: browser-tor-real (sempre), browser-tor-interactive (profilo hermes)
+download "browser-tor-real/Dockerfile" "browser-tor-real/Dockerfile"
+download "browser-tor-real/app.py" "browser-tor-real/app.py"
+download "browser-tor-real/entrypoint.sh" "browser-tor-real/entrypoint.sh"
+download "browser-tor-real/fetch_tb.py" "browser-tor-real/fetch_tb.py"
+download "browser-tor-real/requirements.txt" "browser-tor-real/requirements.txt"
+download "browser-tor-real/test-tor-real.sh" "browser-tor-real/test-tor-real.sh"
+download "browser-tor-interactive/Dockerfile" "browser-tor-interactive/Dockerfile"
+download "browser-tor-interactive/interactive.py" "browser-tor-interactive/interactive.py"
+download "browser-tor-interactive/interactive_entrypoint.sh" "browser-tor-interactive/interactive_entrypoint.sh"
+download "browser-tor-interactive/test_interactive.py" "browser-tor-interactive/test_interactive.py"
 
 download "browser-clear/Dockerfile"    "browser-clear/Dockerfile"
 download "browser-clear/app.py"        "browser-clear/app.py"
@@ -377,6 +389,7 @@ check_http() {
 
 check_http "browser-clear"    "http://127.0.0.1:8082/health"
 check_http "browser-tor"      "http://127.0.0.1:8081/health"
+check_http "browser-tor-real" "http://127.0.0.1:8086/health"
 check_http "browser-i2p"      "http://127.0.0.1:8083/health"
 check_http "browser-http"     "http://127.0.0.1:8084/health"
 check_http "browser-camoufox" "http://127.0.0.1:8085/health"
@@ -395,6 +408,7 @@ echo ""
 info "Services:"
 echo "  browser-clear    -> http://127.0.0.1:8082  (Patchright / Chromium)"
 echo "  browser-tor      -> http://127.0.0.1:8081  (Firefox + Tor)"
+echo "  browser-tor-real -> http://127.0.0.1:8086  (Tor Browser ufficiale, JS spento)"
 echo "  browser-i2p      -> http://127.0.0.1:8083  (Firefox + I2P)"
 echo "  browser-http     -> http://127.0.0.1:8084  (curl_cffi)"
 echo "  browser-camoufox -> http://127.0.0.1:8085  (Camoufox / Firefox C++)"

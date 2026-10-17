@@ -44,6 +44,76 @@ services:
       start_period: 20s
     restart: unless-stopped
 
+  # Tor Browser ufficiale (JS spento) dietro /browse e /search/ahmia.
+  # Usato da darknet_tool.py (Open WebUI) e dal plugin browser_tor di Hermes.
+  browser-tor-real:
+    build: ./browser-tor-real
+    container_name: browser-tor-real
+    init: true
+    networks: [ai-net, proxy-net]
+    depends_on: [tor-proxy]
+    environment:
+      - TOR_CONTROL_PASSWORD=${TOR_CONTROL_PASSWORD:?Set TOR_CONTROL_PASSWORD in .env}
+      - MAX_CONCURRENT=2
+      - TOR_NEWNYM=0
+      - TB_DEBUG=0
+      - TB_EXTRA_PREFS=${TB_EXTRA_PREFS:-}
+    ports:
+      - "127.0.0.1:8086:8081"
+    shm_size: 1gb
+    mem_limit: 2g
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=768m,mode=1777
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8081/health',timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  # Solo per Hermes (profilo "hermes": COMPOSE_PROFILES=hermes nel .env).
+  # API per-tab compatibile Camofox sullo stesso Tor Browser, per le sessioni tor+.
+  # Usa tor-proxy-camofox (Snowflake) come SOCKS.
+  browser-tor-interactive:
+    build:
+      context: ./browser-tor-interactive
+      additional_contexts:
+        base: service:browser-tor-real
+      args:
+        BASE_IMAGE: base
+    container_name: browser-tor-interactive
+    profiles: ["hermes"]
+    restart: unless-stopped
+    init: true
+    networks: [ai-net, proxy-net]
+    depends_on: [tor-proxy-camofox]
+    environment:
+      - TOR_HOST=tor-proxy-camofox
+      - TOR_CONTROL_PASSWORD=${TOR_CONTROL_PASSWORD:?Set TOR_CONTROL_PASSWORD in .env}
+      - TOR_NEWNYM=0
+      - TB_DEBUG=0
+      - MAX_TABS=2
+      - IDLE_TIMEOUT=600
+      - INTERACTIVE_JS=0
+      - INTERACTIVE_BLOCK_MEDIA=0
+    shm_size: 1gb
+    mem_limit: 2g
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=768m,mode=1777
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:9377/health',timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
   browser-clear:
     build: ./browser-clear
     container_name: browser-clear

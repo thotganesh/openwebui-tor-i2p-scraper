@@ -90,7 +90,7 @@ curl -fsSL https://raw.githubusercontent.com/thotganesh/openwebui-tor-i2p-scrape
 | **Tor reader** | New `browser-tor-real`: the official Tor Browser (GPG-verified at build time) driven by geckodriver, behind `/browse` and `/search/ahmia` | Pages see a stock Tor Browser instead of the hardened Playwright Firefox of `browser-tor` |
 | **Tor interactive** | New `browser-tor-interactive`: a Camofox-compatible per-tab REST API on the same Tor Browser, for Hermes `tor+` sessions | Click, type and scroll on `.onion` sites without Camoufox's randomized fingerprint |
 | **Darknet tool** | `search_onion` now submits the Ahmia form from inside Tor Browser | No clearnet request for the search. **Requires `browser-tor-real`** |
-| **Opt-in** | Both services are compose overrides and are not started by `install.sh` | The existing `browser-tor` keeps working unchanged |
+| **Start-up** | `browser-tor-real` starts with the stack; `browser-tor-interactive` only with `COMPOSE_PROFILES=hermes` | The existing `browser-tor` keeps working unchanged |
 
 ## 🆕 What's new in v3.6
 
@@ -407,7 +407,7 @@ Then install the two tools (see [How to install](#-how-to-install)) and run the 
 - 🖥️ A VPS with Docker and Docker Compose (the `docker compose` command)
 - 📡 **Outgoing UDP open**: Snowflake negotiates via WebRTC/ICE (UDP). If the provider blocks it, Tor stays stuck in bootstrap
 - 🔗 A Docker network shared with OpenWebUI, here called `ai-net`: `docker network create ai-net`
-- 🔌 Free host ports: `8081` (browser-tor), `8082` (browser-clear), `8083` (browser-i2p), `8084` (browser-http), `8085` (browser-camoufox), `8191` (solverr), `8888` (searxng)
+- 🔌 Free host ports: `8081` (browser-tor), `8086` (browser-tor-real), `8082` (browser-clear), `8083` (browser-i2p), `8084` (browser-http), `8085` (browser-camoufox), `8191` (solverr), `8888` (searxng)
 - 💾 About **35 GB of free disk space** during the first install. Breakdown: ~14 GB Docker images (the 13 containers), ~12 GB Docker build cache (reclaimable), ~6.5 GB OpenWebUI if on the same host. After `docker builder prune -f` you free ~12 GB.
 - 🤖 OpenWebUI already running and connected to `ai-net`
 
@@ -562,7 +562,7 @@ What it does ([`browser-tor/app.py`](browser-tor/app.py)):
 
 ### 2b. browser-tor-real and browser-tor-interactive: official Tor Browser
 
-📁 [`browser-tor-real/`](browser-tor-real/) — port `8081` · 📁 [`browser-tor-interactive/`](browser-tor-interactive/) — port `9377`
+📁 [`browser-tor-real/`](browser-tor-real/) — port `8081` (host `127.0.0.1:8086`) · 📁 [`browser-tor-interactive/`](browser-tor-interactive/) — port `9377`
 
 Both run the **official Tor Browser**, downloaded at build time and checked against the Tor Browser Developers signing key (the build stops if the fingerprint does not match), driven by geckodriver. Tor Browser does not start its own Tor: it uses an external SOCKS proxy (`TOR_HOST`, default `tor-proxy`, port `9150`). Point `TOR_HOST` at a Tor daemon configured with Snowflake bridges and nothing leaves through a classic circuit.
 
@@ -573,17 +573,13 @@ Both run the **official Tor Browser**, downloaded at build time and checked agai
 | Browsers | Parallel launches, `MAX_CONCURRENT` (default 1) | One per `userId`, closed after `IDLE_TIMEOUT` seconds (600), at most `MAX_TABS` (2) |
 | JavaScript | Off by default | Off by default (`INTERACTIVE_JS=1` turns it on) |
 
-`browser-tor-interactive` is built `FROM ai-stack-browser-tor-real:latest`, so build `browser-tor-real` first. That tag assumes the Compose project directory is named `ai-stack`; otherwise edit the `FROM` line. The interactive override sets `TOR_HOST=tor-proxy-camofox` (a second Snowflake daemon, as in hermes-stealth-stack); change it to `tor-proxy` if you only run one. `TOR_CONTROL_PASSWORD` must be set in `.env`.
+`browser-tor-real` is part of the default stack: `install.sh` downloads, builds and starts it, and it is published on the host as `127.0.0.1:8086` (container port `8081`). `browser-tor-interactive` sits behind the `hermes` Compose profile, because only Hermes needs it and it can use up to 2 GB of memory. It is built on top of `browser-tor-real` (Compose builds that one first, through `additional_contexts`), so nothing is built by hand.
 
 ```bash
 cd ai-stack
-F="-f docker-compose.yml -f docker-compose.tor-real.yml -f docker-compose.tor-interactive.yml"
-docker compose $F build browser-tor-real
-docker compose $F build browser-tor-interactive
-docker compose $F up -d --no-deps browser-tor-real browser-tor-interactive
+# once: add COMPOSE_PROFILES=hermes to .env (or pass --profile hermes on every command)
+docker compose up -d --build
 ```
-
-Always pass every override file you use: Compose reports containers from a missing file as orphans, and `--remove-orphans` would delete them.
 
 **Using them**
 
@@ -1217,9 +1213,11 @@ The installer overwrites every file it downloads but preserves `.env` and `searx
 - `openwebui-tools/darknet_tool.py`: `tor_url` punta a `browser-tor-real`;
   `search_onion` invia il form di Ahmia da dentro Tor Browser invece di fare
   richieste in chiaro. **Richiede `browser-tor-real`**.
-- Nuovi `docker-compose.tor-real.yml` e `docker-compose.tor-interactive.yml`
-  (opzionali, non avviati da `install.sh`). Passare sempre tutti i file `-f`
-  in uso: Compose tratta i container dei file mancanti come orfani.
+- `browser-tor-real` e `browser-tor-interactive` stanno nel `docker-compose.yml`
+  principale, senza file di override. Il reale parte sempre, lo scarica
+  `install.sh` e ha la porta host `127.0.0.1:8086`; l'interattivo sta nel
+  profilo `hermes` (`COMPOSE_PROFILES=hermes` nel `.env`) e si costruisce
+  sopra il reale con `additional_contexts`.
 - `browser-tor` (Playwright) resta invariato.
 
 ### v3.6.8 — Tor DataDirectory + fourplay network isolation (2026-10-14)
