@@ -2,7 +2,7 @@
 # Rotate the Tor ControlPort password and hash in .env.
 # Usage: sudo bash scripts/rotate-tor-password.sh
 # Regenerates TOR_CONTROL_PASSWORD and TOR_CONTROL_HASH, then restarts
-# tor-proxy and browser-tor. Brief Tor downtime (10-40 s bootstrap).
+# tor-proxy. Brief Tor downtime (10-40 s bootstrap).
 set -euo pipefail
 
 STACK_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -37,8 +37,8 @@ p.write_text(s)
 PY
 chmod 600 .env
 
-echo "restarting tor-proxy + browser-tor..."
-docker compose up -d --force-recreate tor-proxy browser-tor
+echo "restarting tor-proxy..."
+docker compose up -d --force-recreate tor-proxy
 
 echo "waiting for Tor bootstrap (max 180s)..."
 for i in $(seq 1 90); do
@@ -51,8 +51,5 @@ done
 
 echo "test browse..."
 docker run --rm --network ai-net curlimages/curl:latest -m 90 -s \
-  -X POST http://browser-tor:8081/browse \
-  -H 'Content-Type: application/json' \
-  -d '{"url":"https://check.torproject.org/api/ip"}' | head -c 150
 echo
 echo "done. Password ruotata."

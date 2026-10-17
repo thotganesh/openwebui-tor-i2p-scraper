@@ -4,7 +4,6 @@
 # ============================================================
 # Installs the entire v3.1 stack in one go:
 #   - tor-proxy (Tor + Snowflake)
-#   - browser-tor (Firefox + Playwright + Tor)
 #   - browser-clear (Patchright - Chromium stealth)
 #   - browser-camoufox (Camoufox - Firefox engine-level stealth)
 #   - browser-http (curl_cffi - fast HTTP)
@@ -122,7 +121,7 @@ log "Disk space: ${AVAIL_GB}GB available (need ~35GB for the first install)"
 # ============================================================
 step "2/9 Creating directories"
 
-run mkdir -p "$STACK_DIR"/{tor-snowflake,browser-tor,browser-tor-real,browser-tor-interactive,browser-clear,browser-camoufox,browser-http,browser-i2p,searxng-config,openwebui-tools,i2p-data,shared,scripts,4play-build,fourget-data,fourget-proxies,firefox-4play-data}
+run mkdir -p "$STACK_DIR"/{tor-snowflake,browser-tor-real,browser-tor-interactive,browser-clear,browser-camoufox,browser-http,browser-i2p,searxng-config,openwebui-tools,i2p-data,shared,scripts,4play-build,fourget-data,fourget-proxies,firefox-4play-data}
 cd "$STACK_DIR"
 if [ "$DRY_RUN" != "1" ]; then
   # i2pd gira come UID 100 / GID 65533 nell'immagine. Dai solo i permessi
@@ -166,8 +165,6 @@ download "README.md"                   "README.md"
 download "tor-snowflake/Dockerfile"    "tor-snowflake/Dockerfile"
 download "tor-snowflake/torrc"         "tor-snowflake/torrc"
 
-download "browser-tor/Dockerfile"      "browser-tor/Dockerfile"
-download "browser-tor/app.py"          "browser-tor/app.py"
 
 # Tor Browser ufficiale: browser-tor-real (sempre), browser-tor-interactive (profilo hermes)
 download "browser-tor-real/Dockerfile" "browser-tor-real/Dockerfile"
@@ -388,7 +385,6 @@ check_http() {
 }
 
 check_http "browser-clear"    "http://127.0.0.1:8082/health"
-check_http "browser-tor"      "http://127.0.0.1:8081/health"
 check_http "browser-tor-real" "http://127.0.0.1:8086/health"
 check_http "browser-i2p"      "http://127.0.0.1:8083/health"
 check_http "browser-http"     "http://127.0.0.1:8084/health"
@@ -407,7 +403,6 @@ info "OpenWebUI:         $OPENWEBUI_CONTAINER"
 echo ""
 info "Services:"
 echo "  browser-clear    -> http://127.0.0.1:8082  (Patchright / Chromium)"
-echo "  browser-tor      -> http://127.0.0.1:8081  (Firefox + Tor)"
 echo "  browser-tor-real -> http://127.0.0.1:8086  (Tor Browser ufficiale, JS spento)"
 echo "  browser-i2p      -> http://127.0.0.1:8083  (Firefox + I2P)"
 echo "  browser-http     -> http://127.0.0.1:8084  (curl_cffi)"

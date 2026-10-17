@@ -26,24 +26,6 @@ services:
       - tor-data-camofox:/var/lib/tor
     restart: unless-stopped
 
-  browser-tor:
-    build: ./browser-tor
-    container_name: browser-tor
-    networks: [ai-net, proxy-net]
-    environment:
-      - TOR_CONTROL_PASSWORD=${TOR_CONTROL_PASSWORD:?Set TOR_CONTROL_PASSWORD in .env}
-    depends_on: [tor-proxy]
-    ports:
-      - "127.0.0.1:8081:8081"
-    shm_size: 1gb
-    healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8081/health',timeout=3)"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 20s
-    restart: unless-stopped
-
   # Tor Browser ufficiale (JS spento) dietro /browse e /search/ahmia.
   # Usato da darknet_tool.py (Open WebUI) e dal plugin browser_tor di Hermes.
   browser-tor-real:

@@ -28,12 +28,10 @@ jobs:
             browser-clear/app.py \
             browser-camoufox/app.py \
             browser-i2p/app.py \
-            browser-tor/app.py \
             browser-tor-real/app.py \
             browser-tor-real/fetch_tb.py \
             browser-tor-interactive/interactive.py \
             browser-tor-interactive/test_interactive.py \
-            browser-tor/startup_check.py \
             openwebui-tools/web_tool.py \
             openwebui-tools/darknet_tool.py
 
