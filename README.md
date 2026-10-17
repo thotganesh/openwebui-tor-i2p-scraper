@@ -43,6 +43,7 @@ curl -fsSL https://raw.githubusercontent.com/thotganesh/openwebui-tor-i2p-scrape
 
 ## 📑 Table of Contents
 
+- [🆕 What's new in v3.7](#-whats-new-in-v37)
 - [🆕 What's new in v3.6](#-whats-new-in-v36)
 - [🆕 What's new in v3.5.6](#-whats-new-in-v356)
 - [🆕 What's new in v3.5](#-whats-new-in-v35)
@@ -59,6 +60,7 @@ curl -fsSL https://raw.githubusercontent.com/thotganesh/openwebui-tor-i2p-scrape
   - [Folder structure](#folder-structure)
   - [1. tor-proxy: Tor + Snowflake](#1-tor-proxy-tor--snowflake)
   - [2. browser-tor: anonymity via Tor](#2-browser-tor-anonymity-via-tor)
+  - [2b. browser-tor-real and browser-tor-interactive: official Tor Browser](#2b-browser-tor-real-and-browser-tor-interactive-official-tor-browser)
   - [3. Clearnet browsers: browser-clear (tier 2) and browser-camoufox (tier 3)](#3-clearnet-browsers-browser-clear-tier-2-and-browser-camoufox-tier-3)
   - [4. browser-http: lightweight TLS impersonation (tier 1)](#4-browser-http-lightweight-tls-impersonation-tier-1)
   - [5. I2P: i2p-proxy + browser-i2p](#5-i2p-i2p-proxy--browser-i2p)
@@ -80,6 +82,15 @@ curl -fsSL https://raw.githubusercontent.com/thotganesh/openwebui-tor-i2p-scrape
 - [⚖️ Responsible use](#️-responsible-use)
 
 ---
+
+## 🆕 What's new in v3.7
+
+| Area | Change | Why it matters |
+|---|---|---|
+| **Tor reader** | New `browser-tor-real`: the official Tor Browser (GPG-verified at build time) driven by geckodriver, behind `/browse` and `/search/ahmia` | Pages see a stock Tor Browser instead of the hardened Playwright Firefox of `browser-tor` |
+| **Tor interactive** | New `browser-tor-interactive`: a Camofox-compatible per-tab REST API on the same Tor Browser, for Hermes `tor+` sessions | Click, type and scroll on `.onion` sites without Camoufox's randomized fingerprint |
+| **Darknet tool** | `search_onion` now submits the Ahmia form from inside Tor Browser | No clearnet request for the search. **Requires `browser-tor-real`** |
+| **Opt-in** | Both services are compose overrides and are not started by `install.sh` | The existing `browser-tor` keeps working unchanged |
 
 ## 🆕 What's new in v3.6
 
@@ -546,6 +557,48 @@ What it does ([`browser-tor/app.py`](browser-tor/app.py)):
 - 🧯 **Navigation errors are returned, not raised**: an unreachable `.onion` produces `{"error": "Navigation failed: ..."}` instead of an HTTP 500
 - 🔧 **`js_enabled` flag**: `false` disables JavaScript at context level (and skips the cookie killer)
 - 📝 **Text extraction**: Readability + html2text fallback (see [section 12](#12-intelligent-text-extraction))
+
+---
+
+### 2b. browser-tor-real and browser-tor-interactive: official Tor Browser
+
+📁 [`browser-tor-real/`](browser-tor-real/) — port `8081` · 📁 [`browser-tor-interactive/`](browser-tor-interactive/) — port `9377`
+
+Both run the **official Tor Browser**, downloaded at build time and checked against the Tor Browser Developers signing key (the build stops if the fingerprint does not match), driven by geckodriver. Tor Browser does not start its own Tor: it uses an external SOCKS proxy (`TOR_HOST`, default `tor-proxy`, port `9150`). Point `TOR_HOST` at a Tor daemon configured with Snowflake bridges and nothing leaves through a classic circuit.
+
+| | `browser-tor-real` | `browser-tor-interactive` |
+|---|---|---|
+| Purpose | One-shot reads and Ahmia search | Per-tab sessions (navigate, snapshot, click, type, press, scroll, back, screenshot) |
+| API | `POST /browse`, `POST /search/ahmia`, `GET /health` | Subset of the Camofox REST API that Hermes uses |
+| Browsers | Parallel launches, `MAX_CONCURRENT` (default 1) | One per `userId`, closed after `IDLE_TIMEOUT` seconds (600), at most `MAX_TABS` (2) |
+| JavaScript | Off by default | Off by default (`INTERACTIVE_JS=1` turns it on) |
+
+`browser-tor-interactive` is built `FROM ai-stack-browser-tor-real:latest`, so build `browser-tor-real` first. That tag assumes the Compose project directory is named `ai-stack`; otherwise edit the `FROM` line. The interactive override sets `TOR_HOST=tor-proxy-camofox` (a second Snowflake daemon, as in hermes-stealth-stack); change it to `tor-proxy` if you only run one. `TOR_CONTROL_PASSWORD` must be set in `.env`.
+
+```bash
+cd ai-stack
+F="-f docker-compose.yml -f docker-compose.tor-real.yml -f docker-compose.tor-interactive.yml"
+docker compose $F build browser-tor-real
+docker compose $F build browser-tor-interactive
+docker compose $F up -d --no-deps browser-tor-real browser-tor-interactive
+```
+
+Always pass every override file you use: Compose reports containers from a missing file as orphans, and `--remove-orphans` would delete them.
+
+**Using them**
+
+- **Open WebUI**: `darknet_tool.py` calls `http://browser-tor-real:8081`.
+- **Hermes**: set `BROWSER_TOR_URL=http://browser-tor-real:8081` for the `browser_tor` plugin. For `tor+` sessions set `CAMOFOX_TOR_URL=http://browser-tor-interactive:9377` in the hermes-stealth-stack `.env` and recreate the router (`docker compose up -d --no-deps camofox-router`). Keep `camofox-tor` running: restoring the old value switches back.
+
+**Limits to know**
+
+- With JavaScript off, the snapshot is built from the page source, so pages that render with JS (many sign-up forms) look empty. Enable `INTERACTIVE_JS=1` only if you accept the larger fingerprint surface, or use `camofox-tor`.
+- Every ref (`e1`, `e2`, ...) is checked (tag, `href`, `name`) before an action. If the page changed, the API answers `409` instead of clicking another element.
+- `evaluate` answers only the `window.location.href` probe. Cookies, uploads and arbitrary JavaScript are not exposed (`501`).
+- A link with `target="_blank"` is opened in the same tab.
+- Verified with the DuckDuckGo onion search form and a click-through to torproject.org.
+
+`browser-tor-interactive/test_interactive.py` exercises every route against a `.onion` page. It expects the service on `127.0.0.1:9387`: publish that port temporarily (`ports: ["127.0.0.1:9387:9377"]`) or pass another base URL as the first argument.
 
 ---
 
@@ -1149,6 +1202,25 @@ The script:
 The installer overwrites every file it downloads but preserves `.env` and `searxng-config/settings.yml`. Starting from v3.5.2, the file being replaced is also saved as `<file>.pre-install` the first time, so local edits can be recovered.
 
 ## 📋 Changelog
+
+### v3.7.0 — Tor Browser vero: browser-tor-real e browser-tor-interactive (2026-10-17)
+
+- `browser-tor-real/`: Tor Browser ufficiale (firma GPG verificata in build,
+  la build si ferma se non coincide) pilotato da geckodriver. `/browse` e
+  `/search/ahmia`, JS spento di default, SOCKS su `tor-proxy` (Snowflake),
+  nessun NEWNYM a ogni richiesta (`TOR_NEWNYM=0`).
+- `browser-tor-interactive/`: API REST per-tab compatibile con Camofox (tabs,
+  navigate, snapshot, click, type, press, scroll, back, screenshot) sullo
+  stesso Tor Browser, per le sessioni `tor+` di Hermes. Un browser per
+  `userId`, `MAX_TABS=2`, chiusura dopo 600 s di inattivita'; ogni ref viene
+  verificato prima dell'azione.
+- `openwebui-tools/darknet_tool.py`: `tor_url` punta a `browser-tor-real`;
+  `search_onion` invia il form di Ahmia da dentro Tor Browser invece di fare
+  richieste in chiaro. **Richiede `browser-tor-real`**.
+- Nuovi `docker-compose.tor-real.yml` e `docker-compose.tor-interactive.yml`
+  (opzionali, non avviati da `install.sh`). Passare sempre tutti i file `-f`
+  in uso: Compose tratta i container dei file mancanti come orfani.
+- `browser-tor` (Playwright) resta invariato.
 
 ### v3.6.8 — Tor DataDirectory + fourplay network isolation (2026-10-14)
 
