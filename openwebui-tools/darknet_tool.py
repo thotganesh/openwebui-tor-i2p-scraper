@@ -47,7 +47,7 @@ def _validate_url(url: str) -> str | None:
 
 class Tools:
     def __init__(self):
-        self.tor_url = "http://browser-tor:8081"
+        self.tor_url = "http://browser-tor-real:8081"
         self.i2p_url = "http://browser-i2p:8083"
         self.http_url = "http://browser-http:8084"
 
@@ -70,76 +70,35 @@ class Tools:
 
     async def search_onion(self, query: str) -> str:
         """
-        Cerca su siti .onion usando Ahmia (clearnet) con gestione del token rotante.
-        Usa un User-Agent browser reale per evitare il blocco di Ahmia.
+        Cerca su siti .onion usando Ahmia, interamente via Tor Browser:
+        il form viene inviato da un browser vero dentro Tor, senza traffico dal clearnet.
         """
-        import re
-        from urllib.parse import urlencode
-
-        encoded = quote(query)
-        headers = {
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Connection": "keep-alive",
-        }
-
         try:
-            async with httpx.AsyncClient(timeout=30, follow_redirects=True, headers=headers) as client:
-                home = await client.get("https://ahmia.fi/")
-                home_html = home.text
-
-                # Estrazione atomica: name e value dallo stesso tag <input>
-                m = re.search(
-                    r'<input[^>]*type="hidden"[^>]*name="([0-9a-f]+)"[^>]*value="([0-9a-f]+)"',
-                    home_html,
+            async with httpx.AsyncClient(timeout=200) as client:
+                r = await client.post(
+                    f"{self.tor_url}/search/ahmia",
+                    json={"query": query, "max_results": 15},
                 )
-                if m:
-                    token_name, token_value = m.group(1), m.group(2)
-                else:
-                    # Fallback: ordine attributi invertito
-                    m2 = re.search(
-                        r'<input[^>]*type="hidden"[^>]*value="([0-9a-f]+)"[^>]*name="([0-9a-f]+)"',
-                        home_html,
-                    )
-                    if m2:
-                        token_value, token_name = m2.group(1), m2.group(2)
-                    else:
-                        token_name, token_value = None, None
-
-                if not token_name or not token_value:
-                    return "[TOR ONION SEARCH | Ahmia] Token non trovato. Riprova con search_onion_tor66."
-
-                search_url = f"https://ahmia.fi/search/?q={encoded}&" + urlencode({token_name: token_value})
-                r = await client.get(
-                    search_url,
-                    headers={"Referer": "https://ahmia.fi/"},
-                )
-
-                html = r.text
-                onion_urls = re.findall(r'redirect_url=(http://[a-z0-9]+\.onion[^"&\s]*)', html)
-
-                if onion_urls:
-                    seen = set()
-                    unique = []
-                    for u in onion_urls:
-                        if u not in seen:
-                            seen.add(u)
-                            unique.append(u)
-
-                    out = [f"**Risultati Ahmia per:** {query} ({len(unique)} trovati)\n"]
-                    for i, u in enumerate(unique[:15], 1):
-                        out.append(f"{i}. {u}")
-                    out.append("\n**Nota:** per leggere usa read_tor.")
-                    return "[TOR ONION SEARCH | Ahmia] " + "\n".join(out)
-
-                if "No results" in html or "did not match" in html:
-                    return f"[TOR ONION SEARCH | Ahmia] Nessun risultato per: {query}"
-
-                return f"[TOR ONION SEARCH | Ahmia] Nessun risultato (HTML len: {len(html)}). Prova search_onion_tor66."
-
+                data = r.json()
         except Exception as e:
             return f"[TOR ONION SEARCH | Ahmia] Errore: {e}"
+
+        if data.get("error") or data.get("detail"):
+            return (
+                "[TOR ONION SEARCH | Ahmia] Errore: "
+                + str(data.get("error") or data.get("detail"))
+                + ". Prova search_onion_tor66."
+            )
+
+        results = data.get("results") or []
+        if not results:
+            return f"[TOR ONION SEARCH | Ahmia] Nessun risultato per: {query}"
+
+        out = [f"**Risultati Ahmia per:** {query} ({len(results)} mostrati su {data.get('count', len(results))})\n"]
+        for i, u in enumerate(results, 1):
+            out.append(f"{i}. {u}")
+        out.append("\n**Nota:** per leggere usa read_tor.")
+        return "[TOR ONION SEARCH | Ahmia] " + "\n".join(out)
 
     async def search_onion_tor66(self, query: str) -> str:
         """Cerca su siti .onion usando Tor66 (directory di link freschi, no JS)."""

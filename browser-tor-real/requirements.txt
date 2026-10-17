@@ -1,0 +1,7 @@
+fastapi==0.115.6
+uvicorn==0.34.0
+selenium==4.27.1
+readability-lxml==0.8.1
+lxml_html_clean==0.4.1
+html2text==2024.2.26
+lxml==5.3.0
